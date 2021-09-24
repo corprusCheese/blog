@@ -1,6 +1,6 @@
-package blog.dsls.combined
+package blog.storage.combined
 
-import blog.dsls.actions._
+import blog.storage.actions._
 
 /**
   * trait for automation of crud operations
