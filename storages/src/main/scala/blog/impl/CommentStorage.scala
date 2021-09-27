@@ -3,17 +3,24 @@ package blog.impl
 import blog.domain
 import blog.domain.comments
 import blog.storage.CommentStorageDsl
-import cats.effect.Resource
+import cats.effect.{MonadCancelThrow, Resource}
 import doobie.util.transactor
+import doobie.util.transactor.Transactor
+import org.typelevel.log4cats.Logger
 
-class CommentStorage[F[_]] extends CommentStorageDsl[F] {
+case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
+    extends CommentStorageDsl[F] {
   override def findById(id: domain.CommentId): F[Option[comments.Comment]] = ???
 
   override def fetchAll: F[Vector[comments.Comment]] = ???
 
-  override def getAllUserComments(userId: domain.UserId): F[Vector[comments.Comment]] = ???
+  override def getAllUserComments(
+      userId: domain.UserId
+  ): F[Vector[comments.Comment]] = ???
 
-  override def getAllPostComments(postId: domain.PostId): F[Vector[comments.Comment]] = ???
+  override def getAllPostComments(
+      postId: domain.PostId
+  ): F[Vector[comments.Comment]] = ???
 
   override def update(update: comments.UpdateComment): F[Unit] = ???
 
@@ -23,5 +30,8 @@ class CommentStorage[F[_]] extends CommentStorageDsl[F] {
 }
 
 object CommentStorage {
-  def make[F[_]](ta: transactor.Transactor[F]): Resource[F, CommentStorageDsl[F]] = ???
+  def resource[F[_]: Logger: MonadCancelThrow](
+      tx: transactor.Transactor[F]
+  ): Resource[F, CommentStorageDsl[F]] =
+    Resource.pure[F, CommentStorage[F]](CommentStorage[F](tx))
 }

@@ -7,7 +7,7 @@ import blog.storage.combined.CreateUpdateDelete
 trait UserStorageDsl[F[_]]
     extends CreateUpdateDelete[F, UserCreate, UserUpdate, UserDelete] {
 
-  def findById(id: CommentId): F[Option[User]]
+  def findById(id: UserId): F[Option[User]]
   def findByName(name: Username): F[Vector[User]]
   def fetchAll: F[Vector[User]]
 }

@@ -13,7 +13,7 @@ object comments {
       message: CommentMessage,
       userId: UserId,
       path: CommentMaterializedPath,
-      deleted: Deleted
+      deleted: Deleted = false
   )
 
   case class CreateComment(

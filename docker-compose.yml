@@ -12,6 +12,7 @@ services:
       - POSTGRES_DB=blog
       - POSTGRES_PASSWORD=password
       - POSTGRES_USER=admin
+      - POSTGRES_URL=jdbc:postgresql://0.0.0.0:5432/blog
     volumes:
       - ./project/migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
   redis:

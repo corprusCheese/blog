@@ -1,25 +1,77 @@
 package blog.impl
 
-import blog.domain
-import blog.domain.users
+import blog.domain._
+import blog.domain.users._
+import blog.meta._
 import blog.storage.UserStorageDsl
-import cats.effect.Resource
-import doobie.util.transactor
+import cats.effect._
+import cats.syntax.all._
+import doobie.implicits._
+import doobie.util.transactor._
+import org.typelevel.log4cats._
 
-class UserStorage[F[_]] extends UserStorageDsl[F]{
-  override def findById(id: domain.CommentId): F[Option[users.User]] = ???
+case class UserStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
+    extends UserStorageDsl[F] {
 
-  override def findByName(name: domain.Username): F[Vector[users.User]] = ???
+  override def findById(id: UserId): F[Option[User]] =
+    sql"""SELECT uuid, name, password, deleted FROM users WHERE uuid = ${id}"""
+      .query[(UserId, Username, HashedPassword, Deleted)]
+      .option
+      .transact(tx)
+      .flatTap(_ => Logger[F].info(s"finding user by id = ${id}").pure[F])
+      .map(_.map {
+        case (userId, username, password, deleted) =>
+          User(userId, username, password, deleted)
+      })
 
-  override def fetchAll: F[Vector[users.User]] = ???
+  override def findByName(name: Username): F[Vector[User]] =
+    sql"""SELECT uuid, name, password, deleted FROM users WHERE name = ${name}"""
+      .query[(UserId, Username, HashedPassword, Deleted)]
+      .to[Vector]
+      .transact(tx)
+      .flatTap(_ => Logger[F].info(s"finding by name ${name}").pure[F])
+      .map(_.map {
+        case (userId, username, password, deleted) =>
+          User(userId, username, password, deleted)
+      })
 
-  override def create(create: users.UserCreate): F[Unit] = ???
+  override def fetchAll: F[Vector[User]] =
+    sql"""SELECT uuid, name, password, deleted FROM users WHERE deleted = false"""
+      .query[(UserId, Username, HashedPassword, Deleted)]
+      .to[Vector]
+      .transact(tx)
+      .flatTap(_ => Logger[F].info("fetching all users").pure[F])
+      .map(_.map {
+        case (userId, username, password, deleted) =>
+          User(userId, username, password, deleted)
+      })
 
-  override def update(update: users.UserUpdate): F[Unit] = ???
+  override def create(create: UserCreate): F[Unit] =
+    sql"""INSERT INTO users (uuid, name, password) VALUES (${create.userId}, ${create.username}, MD5(${create.password}))""".update.run
+      .transact(tx)
+      .flatTap(_ => Logger[F].info("creating new user").pure[F])
+      .map(_ => ())
 
-  override def delete(delete: users.UserDelete): F[Unit] = ???
+  override def update(update: UserUpdate): F[Unit] =
+    sql"""UPDATE users SET name = ${update.username}, password = MD5(${update.password}) WHERE uuid = ${update.userId}""".update.run
+      .transact(tx)
+      .flatTap(_ =>
+        Logger[F].info(s"updating user with id = ${update.userId}").pure[F]
+      )
+      .map(_ => ())
+
+  override def delete(delete: UserDelete): F[Unit] =
+    sql"""UPDATE users SET deleted = true WHERE uuid = ${delete.userId}""".update.run
+      .transact(tx)
+      .flatTap(_ =>
+        Logger[F].info(s"deleting user with id = ${delete.userId}").pure[F]
+      )
+      .map(_ => ())
 }
 
 object UserStorage {
-  def make[F[_]](ta: transactor.Transactor[F]): Resource[F, UserStorageDsl[F]] = ???
+  def resource[F[_]: Logger: MonadCancelThrow](
+      tx: Transactor[F]
+  ): Resource[F, UserStorageDsl[F]] =
+    Resource.pure[F, UserStorage[F]](UserStorage[F](tx))
 }

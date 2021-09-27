@@ -1,27 +1,104 @@
 package blog.impl
 
-import blog.domain
-import blog.domain.{Page, PerPage, posts}
+import blog.domain._
+import blog.domain.posts._
 import blog.storage.PostStorageDsl
-import cats.effect.Resource
+import cats.effect.{MonadCancelThrow, Resource}
+import cats.implicits._
+import doobie.implicits._
 import doobie.util.transactor
+import doobie.util.transactor.Transactor
+import doobie.refined._
+import doobie.refined.implicits._
+import eu.timepit.refined.auto._
+import org.typelevel.log4cats.Logger
+import blog.meta._
 
-class PostStorage[F[_]] extends PostStorageDsl[F] {
-  override def findById(id: domain.PostId): F[Option[posts.Post]] = ???
+case class PostStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
+    extends PostStorageDsl[F] {
+  override def findById(id: PostId): F[Option[Post]] =
+    sql"""SELECT uuid, posts.message, user_id, deleted FROM posts WHERE uuid = ${id}"""
+      .query[(PostId, PostMessage, UserId, Deleted)]
+      .option
+      .transact(tx)
+      .flatTap(_ => Logger[F].info(s"finding post by id = ${id}").pure[F])
+      .map(_.map {
+        case (postId, message, userId, deleted) =>
+          Post(postId, message, userId, deleted)
+      })
 
-  override def fetchForPagination(page: Page, perPage: PerPage): F[Vector[posts.Post]] = ???
+  override def fetchForPagination(
+      page: Page,
+      perPage: PerPage
+  ): F[Vector[Post]] =
+    sql"""SELECT uuid, posts.message, user_id, deleted FROM posts WHERE deleted = false LIMIT ${perPage} OFFSET ${page * perPage}"""
+      .query[(PostId, PostMessage, UserId, Deleted)]
+      .to[Vector]
+      .transact(tx)
+      .flatTap(_ =>
+        Logger[F].info(s"fetching next ${perPage} for page ${page}").pure[F]
+      )
+      .map(_.map {
+        case (postId, message, userId, deleted) =>
+          Post(postId, message, userId, deleted)
+      })
 
-  override def getAllUserPosts(userId: domain.UserId): F[Vector[posts.Post]] = ???
+  override def getAllUserPosts(userId: UserId): F[Vector[Post]] =
+    sql"""SELECT uuid, posts.message, user_id, deleted FROM posts WHERE user_id = ${userId} AND deleted = false"""
+      .query[(PostId, PostMessage, UserId, Deleted)]
+      .to[Vector]
+      .transact(tx)
+      .flatTap(_ =>
+        Logger[F].info(s"fetching all post of user id = ${userId}").pure[F]
+      )
+      .map(_.map {
+        case (postId, message, userId, deleted) =>
+          Post(postId, message, userId, deleted)
+      })
 
-  override def getPostsWithTagsWithPagination(tagId: domain.TagId, page: Page, perPage: PerPage): F[Vector[posts.Post]] = ???
+  override def getPostsWithTagsWithPagination(
+      tagId: TagId,
+      page: Page,
+      perPage: PerPage
+  ): F[Vector[Post]] =
+    sql"""SELECT uuid, posts.message, user_id, deleted FROM posts JOIN posts_tags ON posts.uuid = posts_tags.post_id WHERE posts_tags.tag_id = ${tagId} LIMIT ${perPage} OFFSET ${page * perPage}"""
+      .query[(PostId, PostMessage, UserId, Deleted)]
+      .to[Vector]
+      .transact(tx)
+      .flatTap(_ =>
+        Logger[F].info(s"fetching next ${perPage} for page ${page}").pure[F]
+      )
+      .map(_.map {
+        case (postId, message, userId, deleted) =>
+          Post(postId, message, userId, deleted)
+      })
 
-  override def create(create: posts.CreatePost): F[Unit] = ???
+  override def create(create: CreatePost): F[Unit] =
+    sql"""INSERT INTO posts (uuid, message, user_id) VALUES (${create.postId}, ${create.message}, ${create.userId})""".update.run
+      .transact(tx)
+      .flatTap(_ => Logger[F].info("creating new post").pure[F])
+      .map(_ => ())
 
-  override def update(update: posts.UpdatePost): F[Unit] = ???
+  override def update(update: UpdatePost): F[Unit] =
+    sql"""UPDATE posts SET message = ${update.message} WHERE uuid = ${update.postId}""".update.run
+      .transact(tx)
+      .flatTap(_ =>
+        Logger[F].info(s"updating post with id = ${update.postId}").pure[F]
+      )
+      .map(_ => ())
 
-  override def delete(delete: posts.DeletePost): F[Unit] = ???
+  override def delete(delete: DeletePost): F[Unit] =
+    sql"""UPDATE posts SET deleted = true WHERE uuid = ${delete.postId}""".update.run
+      .transact(tx)
+      .flatTap(_ =>
+        Logger[F].info(s"deleting post with id = ${delete.postId}").pure[F]
+      )
+      .map(_ => ())
 }
 
 object PostStorage {
-  def make[F[_]](ta: transactor.Transactor[F]): Resource[F, PostStorageDsl[F]] = ???
+  def resource[F[_]: Logger: MonadCancelThrow](
+      tx: transactor.Transactor[F]
+  ): Resource[F, PostStorageDsl[F]] =
+    Resource.pure[F, PostStorage[F]](PostStorage[F](tx))
 }

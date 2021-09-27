@@ -9,7 +9,7 @@ lazy val core = (project in file("core"))
     name := "core",
     scalaVersion := "2.13.6",
     scalacOptions ++= Seq("-Ymacro-annotations"),
-      libraryDependencies ++= Seq(
+    libraryDependencies ++= Seq(
       "tf.tofu" %% "derevo-core" % "0.12.6",
       "tf.tofu" %% "derevo-cats" % "0.12.6",
       "tf.tofu" %% "derevo-circe-magnolia" % "0.12.6",
@@ -18,7 +18,7 @@ lazy val core = (project in file("core"))
       "io.estatico" %% "newtype" % "0.4.4",
       "eu.timepit" %% "refined" % "0.9.15",
       "eu.timepit" %% "refined-cats" % "0.9.15",
-        "io.circe" %% "circe-refined" % "0.14.1"
+      "io.circe" %% "circe-refined" % "0.14.1"
     )
   )
 
@@ -34,10 +34,15 @@ lazy val storages = (project in file("storages"))
       "org.tpolecat" %% "doobie-postgres-circe" % "1.0.0-RC1",
       "com.disneystreaming" %% "weaver-cats" % "0.7.6" % Test,
       "com.disneystreaming" %% "weaver-scalacheck" % "0.7.6" % Test,
-      "io.chrisdavenport" %% "log4cats-core" % "1.1.1",
-
-    )
-  ).dependsOn(core)
+      "org.typelevel" %% "log4cats-slf4j" % "2.1.1",
+      "org.typelevel" %% "log4cats-noop" % "2.1.1",
+      "ch.qos.logback" % "logback-classic" % "1.2.6",
+      "eu.timepit" %% "refined" % "0.9.15",
+      "eu.timepit" %% "refined-cats" % "0.9.15",
+      "io.circe" %% "circe-refined" % "0.14.1"
+)
+  )
+  .dependsOn(core)
 
 lazy val http = (project in file("httpApi"))
   .settings(
@@ -53,7 +58,10 @@ lazy val http = (project in file("httpApi"))
       "com.github.cb372" %% "cats-retry" % "3.1.0",
       "com.disneystreaming" %% "weaver-cats" % "0.7.6" % Test,
       "com.disneystreaming" %% "weaver-scalacheck" % "0.7.6" % Test,
-      "io.chrisdavenport" %% "log4cats-core" % "1.1.1",
-      "co.fs2" %% "fs2-core" % "3.1.2"
+      "co.fs2" %% "fs2-core" % "3.1.2",
+      "org.typelevel" %% "log4cats-slf4j" % "2.1.1",
+      "org.typelevel" %% "log4cats-noop" % "2.1.1",
+      "ch.qos.logback" % "logback-classic" % "1.2.6"
     )
-  ).dependsOn(core, storages)
+  )
+  .dependsOn(core, storages)

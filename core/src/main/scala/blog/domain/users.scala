@@ -11,16 +11,20 @@ object users {
   case class User(
       uuid: UserId,
       username: Username,
-      password: Password,
-      deleted: Deleted
+      password: HashedPassword,
+      deleted: Deleted = false
   )
 
-  case class UserCreate(username: Username, password: Password)
+  case class UserCreate(
+      userId: UserId,
+      username: Username,
+      password: HashedPassword
+  )
 
   case class UserUpdate(
       userId: UserId,
       username: Username,
-      password: Password
+      password: HashedPassword
   )
 
   case class UserDelete(userId: UserId)

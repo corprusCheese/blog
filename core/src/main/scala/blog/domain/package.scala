@@ -14,11 +14,6 @@ import java.util.UUID
 
 package object domain {
 
-  /*
-  val minPasswordLength = 8
-  val maxMessageComment = 300
-  val maxMessagePost = 1000
-  val minUsernameLength = 3 */
   val customPerPage = 5
 
   // not refined
@@ -27,6 +22,7 @@ package object domain {
 
   // refined
   type Pass = NonEmptyString
+  type HashedPass = NonEmptyString
   type MessageComment = NonEmptyString
   type MessagePost = NonEmptyString
   type Name = NonEmptyString
@@ -45,6 +41,10 @@ package object domain {
   @derive(encoder, decoder, eqv, show)
   @newtype
   case class Password(value: Pass)
+
+  @derive(encoder, decoder, eqv, show)
+  @newtype
+  case class HashedPassword(value: HashedPass)
 
   @derive(encoder, decoder, eqv, show)
   @newtype
@@ -73,6 +73,5 @@ package object domain {
   @derive(encoder, decoder, eqv, show)
   @newtype
   case class TagName(value: NonEmptyString)
-
 
 }

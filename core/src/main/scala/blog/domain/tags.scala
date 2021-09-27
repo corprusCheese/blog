@@ -7,11 +7,23 @@ import io.estatico.newtype.macros.newtype
 
 object tags {
   @derive(decoder, encoder, eqv, show)
-  case class Tag(uuid: TagId, name: TagName, deleted: Deleted)
+  case class Tag(
+      tagId: TagId,
+      name: TagName,
+      deleted: Deleted = false
+  )
 
-  case class CreateTag(name: TagName)
+  case class TagCreate(
+      tagId: TagId,
+      name: TagName,
+      postsId: Vector[PostId] = Vector.empty
+  )
 
-  case class UpdateTag(uuid: TagId, name: TagName)
+  case class TagUpdate(
+      tagId: TagId,
+      name: TagName,
+      postsId: Vector[PostId] = Vector.empty
+  )
 
-  case class DeleteTag(tagId: TagId)
+  case class TagDelete(tagId: TagId)
 }
