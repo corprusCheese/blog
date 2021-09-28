@@ -1,32 +1,111 @@
 package blog.impl
 
-import blog.domain
-import blog.domain.comments
+import blog.domain._
+import blog.domain.comments._
 import blog.storage.CommentStorageDsl
 import cats.effect.{MonadCancelThrow, Resource}
 import doobie.util.transactor
 import doobie.util.transactor.Transactor
 import org.typelevel.log4cats.Logger
+import eu.timepit.refined.auto._
+import blog.meta._
+import doobie.implicits._
+import cats.implicits._
+import doobie.postgres.circe.json.implicits
+import doobie.postgres.circe.jsonb.implicits
+import doobie.Fragments
 
 case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
     extends CommentStorageDsl[F] {
-  override def findById(id: domain.CommentId): F[Option[comments.Comment]] = ???
+  override def findById(id: CommentId): F[Option[Comment]] =
+    sql"""SELECT uuid, message, user_id, ltree2text(comment_path), deleted FROM comments WHERE uuid = ${id}"""
+      .query[
+        (CommentId, CommentMessage, UserId, CommentMaterializedPath, Deleted)
+      ]
+      .option
+      .transact(tx)
+      .flatTap(_ => Logger[F].info(s"finding comment by id = ${id}").pure[F])
+      .map(_.map {
+        case (commentId, message, userId, path, deleted) =>
+          Comment(commentId, message, userId, path, deleted)
+      })
 
-  override def fetchAll: F[Vector[comments.Comment]] = ???
+  override def fetchAll: F[Vector[Comment]] =
+    sql"""SELECT uuid, message, user_id, ltree2text(comment_path), deleted FROM comments"""
+      .query[
+        (CommentId, CommentMessage, UserId, CommentMaterializedPath, Deleted)
+      ]
+      .to[Vector]
+      .transact(tx)
+      .flatTap(_ => Logger[F].info(s"finding all comments").pure[F])
+      .map(_.map {
+        case (commentId, message, userId, path, deleted) =>
+          Comment(commentId, message, userId, path, deleted)
+      })
 
   override def getAllUserComments(
-      userId: domain.UserId
-  ): F[Vector[comments.Comment]] = ???
+      userId: UserId
+  ): F[Vector[Comment]] =
+    sql"""SELECT uuid, message, user_id, ltree2text(comment_path), deleted FROM comments WHERE user_id = ${userId}"""
+      .query[
+        (CommentId, CommentMessage, UserId, CommentMaterializedPath, Deleted)
+      ]
+      .to[Vector]
+      .transact(tx)
+      .flatTap(_ =>
+        Logger[F].info(s"finding comments of user id = ${userId}").pure[F]
+      )
+      .map(_.map {
+        case (commentId, message, userId, path, deleted) =>
+          Comment(commentId, message, userId, path, deleted)
+      })
 
   override def getAllPostComments(
-      postId: domain.PostId
-  ): F[Vector[comments.Comment]] = ???
+      postId: PostId
+  ): F[Vector[Comment]] =
+    sql"""SELECT uuid, message, user_id, ltree2text(comment_path), deleted FROM comments WHERE comment_path <@ text2ltree(${CommentMaterializedPath(postId.toString)})"""
+      .query[
+        (CommentId, CommentMessage, UserId, CommentMaterializedPath, Deleted)
+      ]
+      .to[Vector]
+      .transact(tx)
+      .flatTap(_ =>
+        Logger[F].info(s"finding comments of post id = ${postId}").pure[F]
+      )
+      .map(_.map {
+        case (commentId, message, userId, path, deleted) =>
+          Comment(commentId, message, userId, path, deleted)
+      })
 
-  override def update(update: comments.UpdateComment): F[Unit] = ???
+  override def update(update: UpdateComment): F[Unit] =
+    sql"""UPDATE comments SET message = ${update.message} WHERE uuid = ${update.commentId}""".update.run
+      .transact(tx)
+      .flatTap(_ =>
+        Logger[F]
+          .info(s"updating post with id = ${update.commentId}")
+          .pure[F]
+      )
+      .map(_ => ())
 
-  override def delete(delete: comments.DeleteComment): F[Unit] = ???
+  override def delete(delete: DeleteComment): F[Unit] =
+    sql"""UPDATE comments SET deleted = true WHERE uuid = ${delete.commentId}""".update.run
+      .transact(tx)
+      .flatTap(_ =>
+        Logger[F]
+          .info(s"deleting post with id = ${delete.commentId}")
+          .pure[F]
+      )
+      .map(_ => ())
 
-  override def create(create: comments.CreateComment): F[Unit] = ???
+  override def create(create: CreateComment): F[Unit] =
+    sql"""INSERT INTO comments (uuid, message, user_id, comment_path) VALUES (${create.commentId}, ${create.message}, ${create.userId}, text2ltree(${create.path}))""".update.run
+      .transact(tx)
+      .flatTap(_ =>
+        Logger[F]
+          .info("creating new comment")
+          .pure[F]
+      )
+      .map(_ => ())
 }
 
 object CommentStorage {

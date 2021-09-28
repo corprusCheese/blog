@@ -41,8 +41,13 @@ CREATE TABLE tags
 
 CREATE TABLE posts_tags
 (
-    post_id UUID NOT NULL REFERENCES posts (uuid),
-    tag_id  UUID NOT NUll REFERENCES tags (uuid),
+    post_id UUID NOT NULL REFERENCES posts (uuid) MATCH SIMPLE
+        ON UPDATE NO ACTION ON DELETE NO ACTION,
+    tag_id  UUID NOT NUll REFERENCES tags (uuid) MATCH SIMPLE
+        ON UPDATE NO ACTION ON DELETE NO ACTION,
     PRIMARY KEY (post_id, tag_id)
 );
+
+ALTER TABLE posts_tags DISABLE TRIGGER ALL;
+
 

@@ -9,7 +9,7 @@ object comments {
 
   @derive(decoder, encoder, eqv, show)
   case class Comment(
-      uuid: CommentId,
+      commentId: CommentId,
       message: CommentMessage,
       userId: UserId,
       path: CommentMaterializedPath,
@@ -17,12 +17,14 @@ object comments {
   )
 
   case class CreateComment(
-      messageComment: CommentMessage,
+      commentId: CommentId,
+      message: CommentMessage,
       userId: UserId,
       path: CommentMaterializedPath
   )
 
-  case class UpdateComment(uuid: CommentId, messageComment: MessageComment)
+  case class UpdateComment(commentId: CommentId, message: CommentMessage)
 
   case class DeleteComment(commentId: CommentId)
+
 }

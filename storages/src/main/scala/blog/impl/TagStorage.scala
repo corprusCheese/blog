@@ -11,6 +11,8 @@ import org.typelevel.log4cats.Logger
 import blog.meta._
 import doobie.implicits._
 import cats.implicits._
+import doobie.{Fragments, Update}
+import doobie.util.fragments.whereAndOpt
 
 case class TagStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
     extends TagStorageDsl[F] {
@@ -52,7 +54,9 @@ case class TagStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .query[(TagId, TagName, Deleted)]
       .to[Vector]
       .transact(tx)
-      .flatTap(_ => Logger[F].info(s"finding tags by post_id = ${postId}").pure[F])
+      .flatTap(_ =>
+        Logger[F].info(s"finding tags by post_id = ${postId}").pure[F]
+      )
       .map(_.map {
         case (tagId, tagName, deleted) =>
           Tag(tagId, tagName, deleted)
@@ -61,14 +65,19 @@ case class TagStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
   override def create(create: TagCreate): F[Unit] =
     sql"""INSERT INTO tags (uuid, name) VALUES (${create.tagId}, ${create.name})""".update.run
       .transact(tx)
-      .flatTap(_ => Logger[F].info("creating new user").pure[F])
+      .flatTap(_ =>
+        addPostsToTag(create.tagId, create.postsId) >> Logger[F]
+          .info("creating new user")
+          .pure[F]
+      )
       .map(_ => ())
 
   override def update(update: TagUpdate): F[Unit] =
     sql"""UPDATE tags SET name = ${update.name} WHERE uuid = ${update.tagId}""".update.run
       .transact(tx)
       .flatTap(_ =>
-        Logger[F].info(s"updating tag with id = ${update.tagId}").pure[F]
+        updatePostsOfTag(update.tagId, update.postsId) >>
+          Logger[F].info(s"updating tag with id = ${update.tagId}").pure[F]
       )
       .map(_ => ())
 
@@ -76,9 +85,27 @@ case class TagStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
     sql"""UPDATE tags SET deleted = true WHERE uuid = ${delete.tagId}""".update.run
       .transact(tx)
       .flatTap(_ =>
-        Logger[F].info(s"deleting tag with id = ${delete.tagId}").pure[F]
+        deleteTagFromPosts(delete.tagId) >>
+          Logger[F].info(s"deleting tag with id = ${delete.tagId}").pure[F]
       )
       .map(_ => ())
+
+  private def addPostsToTag(tagId: TagId, postIds: Vector[PostId]): F[Unit] =
+    Update[(PostId, TagId)](
+      "INSERT INTO posts_tags (post_id, tag_id) VALUES (?,?)"
+    ).updateMany(postIds.map((_, tagId)))
+      .transact(tx)
+      .map(_ => ())
+
+  private def deleteTagFromPosts(tagId: TagId): F[Unit] =
+    sql"""DELETE FROM posts_tags WHERE tag_id = ${tagId}""".update.run
+      .transact(tx)
+      .map(_ => ())
+
+  private def updatePostsOfTag(
+      tagId: TagId,
+      postsIds: Vector[PostId]
+  ): F[Unit] = deleteTagFromPosts(tagId) >> addPostsToTag(tagId, postsIds)
 }
 
 object TagStorage {

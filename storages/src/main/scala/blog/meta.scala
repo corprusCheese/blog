@@ -59,4 +59,14 @@ object meta {
   implicit val hashedPasswordMeta: Meta[HashedPassword] =
     Meta[NonEmptyString].timap(HashedPassword.apply)(_.value)
 
+  // path
+
+  private def ltree2PathForDb(str: String): String = str.replace("-", "s")
+  private def pathForDb2ltree(str: String): String = str.replace("s", "-")
+
+  implicit val pathMeta: Meta[CommentMaterializedPath] =
+    Meta[String].timap(x => CommentMaterializedPath.apply(pathForDb2ltree(x)))(
+      x => ltree2PathForDb(x.value)
+    )
+
 }

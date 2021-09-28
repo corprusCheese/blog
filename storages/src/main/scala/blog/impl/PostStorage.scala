@@ -13,6 +13,9 @@ import doobie.refined.implicits._
 import eu.timepit.refined.auto._
 import org.typelevel.log4cats.Logger
 import blog.meta._
+import doobie.Update
+import doobie.util.fragments.whereAndOpt
+import doobie.Fragments
 
 case class PostStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
     extends PostStorageDsl[F] {
@@ -76,14 +79,20 @@ case class PostStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
   override def create(create: CreatePost): F[Unit] =
     sql"""INSERT INTO posts (uuid, message, user_id) VALUES (${create.postId}, ${create.message}, ${create.userId})""".update.run
       .transact(tx)
-      .flatTap(_ => Logger[F].info("creating new post").pure[F])
+      .flatTap(_ =>
+        addTagsToPost(create.postId, create.tagsId) >> Logger[F]
+          .info("creating new post")
+          .pure[F]
+      )
       .map(_ => ())
 
   override def update(update: UpdatePost): F[Unit] =
     sql"""UPDATE posts SET message = ${update.message} WHERE uuid = ${update.postId}""".update.run
       .transact(tx)
       .flatTap(_ =>
-        Logger[F].info(s"updating post with id = ${update.postId}").pure[F]
+        updateTagsOfPost(update.postId, update.tagsId) >> Logger[F]
+          .info(s"updating post with id = ${update.postId}")
+          .pure[F]
       )
       .map(_ => ())
 
@@ -91,9 +100,27 @@ case class PostStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
     sql"""UPDATE posts SET deleted = true WHERE uuid = ${delete.postId}""".update.run
       .transact(tx)
       .flatTap(_ =>
-        Logger[F].info(s"deleting post with id = ${delete.postId}").pure[F]
+        deletePostFromTags(delete.postId) >> Logger[F]
+          .info(s"deleting post with id = ${delete.postId}")
+          .pure[F]
       )
       .map(_ => ())
+
+  private def addTagsToPost(postId: PostId, tagIds: Vector[TagId]): F[Unit] =
+    Update[(PostId, TagId)](
+      "INSERT INTO posts_tags (post_id, tag_id) VALUES (?,?)"
+    ).updateMany(tagIds.map((postId, _)))
+      .transact(tx)
+      .map(_ => ())
+
+  private def deletePostFromTags(postId: PostId): F[Unit] =
+    sql"""DELETE FROM posts_tags WHERE post_id = ${postId}""".update.run
+      .transact(tx)
+      .map(_ => ())
+
+  private def updateTagsOfPost(postId: PostId, tagIds: Vector[TagId]): F[Unit] =
+    deletePostFromTags(postId) >> addTagsToPost(postId, tagIds)
+
 }
 
 object PostStorage {
