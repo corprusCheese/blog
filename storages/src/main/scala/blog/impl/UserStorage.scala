@@ -24,10 +24,10 @@ case class UserStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
           User(userId, username, password, deleted)
       })
 
-  override def findByName(name: Username): F[Vector[User]] =
+  override def findByName(name: Username): F[Option[User]] =
     sql"""SELECT uuid, name, password, deleted FROM users WHERE name = ${name}"""
       .query[(UserId, Username, HashedPassword, Deleted)]
-      .to[Vector]
+      .option
       .transact(tx)
       .flatTap(_ => Logger[F].info(s"finding by name ${name}").pure[F])
       .map(_.map {

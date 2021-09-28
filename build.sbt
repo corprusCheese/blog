@@ -18,7 +18,8 @@ lazy val core = (project in file("core"))
       "io.estatico" %% "newtype" % "0.4.4",
       "eu.timepit" %% "refined" % "0.9.15",
       "eu.timepit" %% "refined-cats" % "0.9.15",
-      "io.circe" %% "circe-refined" % "0.14.1"
+      "io.circe" %% "circe-refined" % "0.14.1",
+      "dev.profunktor" %% "http4s-jwt-auth" % "1.0.0"
     )
   )
 
@@ -39,7 +40,10 @@ lazy val storages = (project in file("storages"))
       "ch.qos.logback" % "logback-classic" % "1.2.6",
       "eu.timepit" %% "refined" % "0.9.15",
       "eu.timepit" %% "refined-cats" % "0.9.15",
-      "io.circe" %% "circe-refined" % "0.14.1"
+      "io.circe" %% "circe-refined" % "0.14.1",
+      "dev.profunktor" %% "redis4cats-effects" % "1.0.0",
+      "dev.profunktor" %% "redis4cats-log4cats" % "1.0.0",
+      "dev.profunktor" %% "http4s-jwt-auth" % "1.0.0"
 )
   )
   .dependsOn(core)
@@ -61,7 +65,8 @@ lazy val http = (project in file("httpApi"))
       "co.fs2" %% "fs2-core" % "3.1.2",
       "org.typelevel" %% "log4cats-slf4j" % "2.1.1",
       "org.typelevel" %% "log4cats-noop" % "2.1.1",
-      "ch.qos.logback" % "logback-classic" % "1.2.6"
+      "ch.qos.logback" % "logback-classic" % "1.2.6",
+      "dev.profunktor" %% "http4s-jwt-auth" % "1.0.0"
     )
   )
   .dependsOn(core, storages)

@@ -15,10 +15,11 @@ import eu.timepit.refined.cats._
 import eu.timepit.refined.types.string.NonEmptyString
 import org.typelevel.log4cats.SelfAwareStructuredLogger
 import org.typelevel.log4cats.noop.NoOpLogger
-import suite.CustomWeaverSuite
 import utils.generators._
+import weaver.IOSuite
+import weaver.scalacheck.Checkers
 
-object PostgresTest extends CustomWeaverSuite {
+object PostgresTest extends IOSuite with Checkers {
 
   implicit val logger: SelfAwareStructuredLogger[IO] = NoOpLogger[IO]
   val pageOk: Page = 0
@@ -73,7 +74,7 @@ object PostgresTest extends CustomWeaverSuite {
             o.nonEmpty,
             y.nonEmpty,
             z.nonEmpty,
-            q.nonEmpty && q.head.deleted
+            q.nonEmpty && q.get.deleted
           )
         )
       }
@@ -167,7 +168,7 @@ object PostgresTest extends CustomWeaverSuite {
                   y.isEmpty,
                   z.nonEmpty,
                   q.nonEmpty,
-                  p.nonEmpty && p.map(_.deleted == true).get,
+                  p.nonEmpty && p.get.deleted,
                   h.isEmpty
                 )
               )

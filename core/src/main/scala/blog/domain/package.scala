@@ -9,12 +9,16 @@ import eu.timepit.refined.numeric._
 import eu.timepit.refined.types.string.NonEmptyString
 import io.circe.refined._
 import io.estatico.newtype.macros.newtype
+import eu.timepit.refined.auto._
 
 import java.util.UUID
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 package object domain {
 
-  val customPerPage = 5
+  // constants
+  val customPerPage: PerPage = 5
+  val tokenExpirationDefault: FiniteDuration = 60.minutes
 
   // not refined
   type Deleted = Boolean
@@ -74,4 +78,9 @@ package object domain {
   @newtype
   case class TagName(value: NonEmptyString)
 
+  @derive(decoder, encoder)
+  case class LoginUser(
+      username: Username,
+      password: Password
+  )
 }

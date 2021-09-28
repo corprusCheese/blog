@@ -8,6 +8,6 @@ trait UserStorageDsl[F[_]]
     extends CreateUpdateDelete[F, UserCreate, UserUpdate, UserDelete] {
 
   def findById(id: UserId): F[Option[User]]
-  def findByName(name: Username): F[Vector[User]]
+  def findByName(name: Username): F[Option[User]]
   def fetchAll: F[Vector[User]]
 }
