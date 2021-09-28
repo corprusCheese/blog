@@ -47,7 +47,7 @@ object PostgresTest extends CustomWeaverSuite {
         .pure[IO, Aux[IO, Unit]](
           Transactor.fromDriverManager[IO](
             "org.postgresql.Driver",
-            "jdbc:postgresql://0.0.0.0:5432/blog",
+            "jdbc:postgresql://0.0.0.0:5433/blog", // test database
             "admin",
             "password"
           )
@@ -214,14 +214,14 @@ object PostgresTest extends CustomWeaverSuite {
                     UpdateComment(comment.commentId, CommentMessage("test"))
                   )
                   y <- cs.getAllPostComments(post.postId)
-                  /*t <- cs.fetchAll
+                  t <- cs.fetchAll
                   _ <- cs.delete(DeleteComment(comment.commentId))
-                  z <- cs.getAllUserComments(post.userId)*/
+                  z <- cs.getAllUserComments(post.userId)
                 } yield expect.all(
                   x.nonEmpty,
                   y.nonEmpty,
-                  /*t.nonEmpty,
-                  z.nonEmpty && z.head.deleted*/
+                  t.nonEmpty,
+                  z.nonEmpty && z.head.deleted
                 )
               )
             )
@@ -229,12 +229,4 @@ object PostgresTest extends CustomWeaverSuite {
       }
     }
   }
-
-  /*test("final") {
-    postgres => {
-      for {
-        _ <- deleteAll(postgres)
-      } yield expect.all()
-    }
-  }*/
 }
