@@ -1,12 +1,13 @@
 package blog.impl
 
 import blog.domain._
-import blog.domain.users.UserCreate
+import blog.domain.users.{User, UserCreate}
 import blog.storage._
 import cats._
 import cats.implicits._
 import dev.profunktor.auth.jwt.JwtToken
 import dev.profunktor.redis4cats.RedisCommands
+import io.circe.syntax.EncoderOps
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -31,6 +32,12 @@ object AuthCommands {
               _ <- userStorage.create(UserCreate(userId, username, password))
               token <- tokenManager.create
               _ <- redis.setEx(userId.show, token.value, tokenExpiration)
+              _ <- redis.setEx(
+                token.value,
+                User(userId, username, password).asJson.toString,
+                tokenExpiration
+              )
+
             } yield token.some
         }
 
@@ -43,6 +50,11 @@ object AuthCommands {
             for {
               token <- tokenManager.create
               _ <- redis.setEx(user.uuid.show, token.value, tokenExpiration)
+              _ <- redis.setEx(
+                token.value,
+                User(user.uuid, username, password).asJson.toString,
+                tokenExpiration
+              )
             } yield token.some
           case _ => none[JwtToken].pure[F]
         }
