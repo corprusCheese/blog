@@ -1,7 +1,7 @@
 package blog
 
 import blog.domain._
-import cats._
+import cats.Show
 import cats.syntax.all._
 import doobie._
 import io.circe.Json
