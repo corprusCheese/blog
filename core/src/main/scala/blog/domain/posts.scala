@@ -28,5 +28,6 @@ object posts {
       tagsId: Vector[TagId] = Vector.empty
   )
 
+  @derive(decoder, encoder, eqv, show)
   case class DeletePost(postId: PostId)
 }

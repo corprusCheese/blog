@@ -2,16 +2,13 @@ package blog.routes
 
 import blog.domain._
 import blog.domain.users.User
-import blog.errors.{LoginError, RegisterError}
+import blog.errors.{CustomError, LoginError, RegisterError}
 import blog.storage.AuthCommandsDsl
 import blog.utils.PassHasher
 import blog.utils.ext.refined._
 import cats.MonadThrow
 import cats.syntax.all._
 import dev.profunktor.auth.AuthHeaders
-import dev.profunktor.auth.jwt._
-import eu.timepit.refined.types.string.NonEmptyString
-import io.circe.syntax.EncoderOps
 import org.http4s._
 import org.http4s.circe.JsonDecoder
 import org.http4s.dsl.Http4sDsl
@@ -29,11 +26,11 @@ final case class Auth[F[_]: JsonDecoder: MonadThrow](
         authCommands
           .login(user.username, PassHasher.hash(user.password))
           .flatMap {
-            case None    => throw LoginError("Wrong login or password")
+            case None    => throw LoginError
             case Some(x) => Ok(x.value)
           }
           .recoverWith {
-            case e: LoginError => BadRequest(e.msg)
+            case e: CustomError => BadRequest(e.msg)
             case _ => Forbidden()
           }
       }
@@ -48,11 +45,11 @@ final case class Auth[F[_]: JsonDecoder: MonadThrow](
           )
           .flatMap {
             case None =>
-              throw RegisterError("User with such username already exists")
+              throw RegisterError
             case Some(x) => Ok(x.value)
           }
           .recoverWith {
-            case e: RegisterError => BadRequest(e.msg)
+            case e: CustomError => BadRequest(e.msg)
             case _ => Forbidden()
           }
       }

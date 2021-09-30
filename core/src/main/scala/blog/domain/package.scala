@@ -17,7 +17,6 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 package object domain {
 
   // constants
-  val customPerPage: PerPage = 5
   val tokenExpirationDefault: FiniteDuration = 60.minutes
 
   // not refined
@@ -31,7 +30,7 @@ package object domain {
   type MessagePost = NonEmptyString
   type Name = NonEmptyString
   type Page = Int Refined NonNegative
-  type PerPage = Int Refined GreaterEqual[5]
+  type PerPage = Int Refined NonNegative
 
   // without refined
   @derive(encoder, decoder, eqv, show)
@@ -78,9 +77,23 @@ package object domain {
   @newtype
   case class TagName(value: NonEmptyString)
 
+  // json requests
   @derive(decoder, encoder)
   case class LoginUser(
       username: Username,
       password: Password
   )
+
+  @derive(decoder, encoder)
+  case class PostCreation(message: PostMessage, tagIds: Option[Vector[TagId]])
+
+  @derive(decoder, encoder)
+  case class PostChanging(
+      postId: PostId,
+      message: PostMessage,
+      tagIds: Option[Vector[TagId]]
+  )
+
+  @derive(decoder, encoder)
+  case class PostRemoving(postId: PostId)
 }

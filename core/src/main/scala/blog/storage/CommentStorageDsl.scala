@@ -12,4 +12,5 @@ trait CommentStorageDsl[F[_]]
   def fetchAll: F[Vector[Comment]]
   def getAllUserComments(userId: UserId): F[Vector[Comment]]
   def getAllPostComments(postId: PostId): F[Vector[Comment]]
+  def deleteAllPostComments(postId: PostId): F[Unit]
 }

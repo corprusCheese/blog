@@ -106,6 +106,15 @@ case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
           .pure[F]
       )
       .map(_ => ())
+
+  override def deleteAllPostComments(postId: PostId): F[Unit] =
+    sql"""UPDATE comments SET deleted = true WHERE comment_path <@ text2ltree(${CommentMaterializedPath(postId.toString)})"""
+      .update.run
+      .transact(tx)
+      .flatTap(_ =>
+        Logger[F].info(s"delete all comments of post id = ${postId}").pure[F]
+      )
+      .map(_ => ())
 }
 
 object CommentStorage {
