@@ -47,7 +47,7 @@ case class UserStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       })
 
   override def create(create: UserCreate): F[Unit] =
-    sql"""INSERT INTO users (uuid, name, password) VALUES (${create.userId}, ${create.username}, MD5(${create.password}))""".update.run
+    sql"""INSERT INTO users (uuid, name, password) VALUES (${create.userId}, ${create.username}, ${create.password})""".update.run
       .transact(tx)
       .flatTap(_ => Logger[F].info("creating new user").pure[F])
       .map(_ => ())

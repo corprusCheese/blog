@@ -19,7 +19,6 @@ package object domain {
   // constants
   val customPerPage: PerPage = 5
   val tokenExpirationDefault: FiniteDuration = 60.minutes
-  val secretKey: String = "secret"
 
   // not refined
   type Deleted = Boolean

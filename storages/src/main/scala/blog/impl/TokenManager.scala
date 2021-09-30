@@ -30,7 +30,7 @@ case class TokenManager[F[_]: Monad: Sync: Logger](
           .issuedNow(clock)
           .expiresIn(tokenExpiration.toSeconds)(clock)
       )
-      secretKey = JwtSecretKey(domain.secretKey) // todo: config
+      secretKey = JwtSecretKey("secret")
       token <- jwtEncode[F](claim, secretKey, JwtAlgorithm.HS256)
     } yield token
 }
