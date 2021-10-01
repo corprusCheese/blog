@@ -3,13 +3,10 @@ package blog
 import blog.domain.users.User
 import blog.storage._
 import cats.MonadThrow
-import dev.profunktor.redis4cats.RedisCommands
+import cats.implicits._
 import org.http4s.HttpRoutes
 import org.http4s.circe.JsonDecoder
 import org.http4s.server.AuthMiddleware
-import cats._
-import cats.data._
-import cats.implicits._
 
 package object routes {
   def getAll[F[_]: JsonDecoder: MonadThrow](
@@ -22,7 +19,9 @@ package object routes {
   ): HttpRoutes[F] = {
     val authRoutes = Auth[F](ac).routes(am)
     val postRoutes = Posts[F](ps, cs, ts).routes(am)
+    val commentRoutes = Comments[F](cs, ps).routes(am)
+    val tagRoutes = Tags[F](ts, ps).routes(am)
 
-    authRoutes <+> postRoutes
+    authRoutes <+> postRoutes <+> commentRoutes <+> tagRoutes
   }
 }

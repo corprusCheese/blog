@@ -40,13 +40,12 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
           .handleErrorWith(_ => throw CreatePostError)
           .recoverWith {
             case e: CustomError => BadRequest(e.msg)
-
           }
       }
     case ar @ POST -> Root / "update" as user =>
       ar.req.decodeR[PostChanging] { update =>
         postBelongsToUser(user.uuid, update.postId).flatMap {
-          case None => throw UpdatePostError
+          case None => throw PostDontBelongToUser
           case _ =>
             postStorage
               .update(
@@ -66,7 +65,7 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
     case ar @ POST -> Root / "delete" as user =>
       ar.req.decodeR[PostRemoving] { delete =>
         postBelongsToUser(user.uuid, delete.postId).flatMap {
-          case None => throw DeletePostError
+          case None => throw PostNotExists
           case _ =>
             commentStorage
               .deleteAllPostComments(delete.postId)
@@ -91,16 +90,25 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
       val pagination = getPaginationParams(req)
       postStorage
         .fetchForPagination(pagination._1, pagination._2)
-        .flatMap(Ok(_))
+        .flatMap{
+          case v if v.isEmpty => NotFound(s"no next ${pagination._2} posts on page ${pagination._1}")
+          case v if v.nonEmpty => Ok(v)
+        }
 
     case req @ GET -> Root / "user" / userId =>
       postStorage
         .getAllUserPosts(UserId(UUID.fromString(userId)))
-        .flatMap(Ok(_))
-        .handleErrorWith(_ => throw NoPostsFromUser)
-        .recoverWith {
-          case e: CustomError => NotFound(e.msg)
-          case e => BadRequest(e.getMessage)
+        .flatMap{
+          case v if v.isEmpty => NotFound("no posts for such user")
+          case v if v.nonEmpty => Ok(v)
+        }
+
+    case req @ GET -> Root / postId =>
+      postStorage
+        .findById(PostId(UUID.fromString(postId)))
+        .flatMap{
+          case v if v.isEmpty => NotFound("no posts with such id")
+          case v if v.nonEmpty => Ok(v)
         }
 
     case req @ GET -> Root / "tag" / tagId =>
@@ -111,10 +119,9 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
           pagination._1,
           pagination._2
         )
-        .flatMap(Ok(_))
-        .handleErrorWith(_ => throw NoPostsWithTag)
-        .recoverWith {
-          case e: CustomError => NotFound(e.msg)
+        .flatMap{
+          case v if v.isEmpty => NotFound("no post with this tag")
+          case v if v.nonEmpty => Ok(v)
         }
   }
 
@@ -122,7 +129,10 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
       userId: UserId,
       postId: PostId
   ): F[Option[Post]] =
-    postStorage.getAllUserPosts(userId).map(_.find(_.postId == postId))
+    postStorage.findById(postId).map{
+      case None => none[Post]
+      case Some(post) => if (post.userId == userId) post.some else none[Post]
+    }
 
   private def getPaginationParams(req: Request[F]): (Page, PerPage) = {
     val page: Int =

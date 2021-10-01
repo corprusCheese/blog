@@ -79,7 +79,7 @@ case class PostStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
   override def create(create: CreatePost): F[Unit] =
     sql"""INSERT INTO posts (uuid, message, user_id) VALUES (${create.postId}, ${create.message}, ${create.userId})""".update.run
       .transact(tx)
-      .flatTap(_ =>
+      .flatMap(_ =>
         addTagsToPost(create.postId, create.tagsId) >> Logger[F]
           .info("creating new post")
           .pure[F]
@@ -89,7 +89,7 @@ case class PostStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
   override def update(update: UpdatePost): F[Unit] =
     sql"""UPDATE posts SET message = ${update.message} WHERE uuid = ${update.postId}""".update.run
       .transact(tx)
-      .flatTap(_ =>
+      .flatMap(_ =>
         updateTagsOfPost(update.postId, update.tagsId) >> Logger[F]
           .info(s"updating post with id = ${update.postId}")
           .pure[F]
@@ -99,7 +99,7 @@ case class PostStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
   override def delete(delete: DeletePost): F[Unit] =
     sql"""UPDATE posts SET deleted = true WHERE uuid = ${delete.postId}""".update.run
       .transact(tx)
-      .flatTap(_ =>
+      .flatMap(_ =>
         deletePostFromTags(delete.postId) >> Logger[F]
           .info(s"deleting post with id = ${delete.postId}")
           .pure[F]

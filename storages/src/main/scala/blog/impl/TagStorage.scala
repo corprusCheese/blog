@@ -67,7 +67,7 @@ case class TagStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .transact(tx)
       .flatTap(_ =>
         addPostsToTag(create.tagId, create.postsId) >> Logger[F]
-          .info("creating new user")
+          .info("creating new tag")
           .pure[F]
       )
       .map(_ => ())
