@@ -6,18 +6,19 @@ import blog.resources.{HttpServer, StorageResources}
 import blog.routes.getAll
 import cats._
 import cats.effect._
-import cats.implicits._
-import dev.profunktor.redis4cats.effect.MkRedis
-import org.http4s.HttpRoutes
+import dev.profunktor.redis4cats.log4cats.log4CatsInstance
 import org.http4s.implicits._
-import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.SelfAwareStructuredLogger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 object HttpProgram {
 
   def run[F[
       _
-  ]: Monad: MonadCancelThrow: NonEmptyParallel: Async: Logger: MkRedis]
-      : F[Nothing] =
+  ]: Monad: MonadCancelThrow: NonEmptyParallel: Async]
+      : F[Nothing] = {
+    implicit val logger: SelfAwareStructuredLogger[F] = Slf4jLogger.getLogger[F]
+
     StorageResources
       .make[F]
       .evalMap(res => {
@@ -35,4 +36,5 @@ object HttpProgram {
         routes.use[Nothing](r => HttpServer[F].newEmber(r.orNotFound).useForever)
       })
       .useForever
+  }
 }
