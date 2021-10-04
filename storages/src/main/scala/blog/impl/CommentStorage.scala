@@ -24,7 +24,7 @@ case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       ]
       .option
       .transact(tx)
-      .flatTap(_ => Logger[F].info(s"finding comment by id = ${id}").pure[F])
+      .flatTap(_ => Logger[F].info(s"finding comment by id = ${id}"))
       .map(_.map {
         case (commentId, message, userId, path, deleted) =>
           Comment(commentId, message, userId, path, deleted)
@@ -37,7 +37,7 @@ case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       ]
       .to[Vector]
       .transact(tx)
-      .flatTap(_ => Logger[F].info(s"finding all comments").pure[F])
+      .flatTap(_ => Logger[F].info(s"finding all comments"))
       .map(_.map {
         case (commentId, message, userId, path, deleted) =>
           Comment(commentId, message, userId, path, deleted)
@@ -53,7 +53,7 @@ case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .to[Vector]
       .transact(tx)
       .flatTap(_ =>
-        Logger[F].info(s"finding comments of user id = ${userId}").pure[F]
+        Logger[F].info(s"finding comments of user id = ${userId}")
       )
       .map(_.map {
         case (commentId, message, userId, path, deleted) =>
@@ -70,7 +70,7 @@ case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .to[Vector]
       .transact(tx)
       .flatTap(_ =>
-        Logger[F].info(s"finding comments of post id = ${postId}").pure[F]
+        Logger[F].info(s"finding comments of post id = ${postId}")
       )
       .map(_.map {
         case (commentId, message, userId, path, deleted) =>
@@ -83,7 +83,6 @@ case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .flatTap(_ =>
         Logger[F]
           .info(s"updating post with id = ${update.commentId}")
-          .pure[F]
       )
       .map(_ => ())
 
@@ -93,7 +92,6 @@ case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .flatTap(_ =>
         Logger[F]
           .info(s"deleting post with id = ${delete.commentId}")
-          .pure[F]
       )
       .map(_ => ())
 
@@ -103,7 +101,6 @@ case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .flatTap(_ =>
         Logger[F]
           .info("creating new comment")
-          .pure[F]
       )
       .map(_ => ())
 
@@ -112,7 +109,7 @@ case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .update.run
       .transact(tx)
       .flatTap(_ =>
-        Logger[F].info(s"delete all comments of post id = ${postId}").pure[F]
+        Logger[F].info(s"delete all comments of post id = ${postId}")
       )
       .map(_ => ())
 }

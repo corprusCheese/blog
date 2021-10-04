@@ -21,7 +21,7 @@ case class TagStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .query[(TagId, TagName, Deleted)]
       .option
       .transact(tx)
-      .flatTap(_ => Logger[F].info(s"finding tag by id = ${id}").pure[F])
+      .flatTap(_ => Logger[F].info(s"finding tag by id = ${id}"))
       .map(_.map {
         case (tagId, tagName, deleted) =>
           Tag(tagId, tagName, deleted)
@@ -32,7 +32,7 @@ case class TagStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .query[(TagId, TagName, Deleted)]
       .to[Vector]
       .transact(tx)
-      .flatTap(_ => Logger[F].info(s"finding all tags").pure[F])
+      .flatTap(_ => Logger[F].info(s"finding all tags"))
       .map(_.map {
         case (tagId, tagName, deleted) =>
           Tag(tagId, tagName, deleted)
@@ -43,7 +43,7 @@ case class TagStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .query[(TagId, TagName, Deleted)]
       .to[Vector]
       .transact(tx)
-      .flatTap(_ => Logger[F].info(s"finding tags by name = ${name}").pure[F])
+      .flatTap(_ => Logger[F].info(s"finding tags by name = ${name}"))
       .map(_.map {
         case (tagId, tagName, deleted) =>
           Tag(tagId, tagName, deleted)
@@ -55,7 +55,7 @@ case class TagStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .to[Vector]
       .transact(tx)
       .flatTap(_ =>
-        Logger[F].info(s"finding tags by post_id = ${postId}").pure[F]
+        Logger[F].info(s"finding tags by post_id = ${postId}")
       )
       .map(_.map {
         case (tagId, tagName, deleted) =>
@@ -68,7 +68,6 @@ case class TagStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .flatTap(_ =>
         addPostsToTag(create.tagId, create.postsId) >> Logger[F]
           .info("creating new tag")
-          .pure[F]
       )
       .map(_ => ())
 
@@ -77,7 +76,7 @@ case class TagStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .transact(tx)
       .flatTap(_ =>
         updatePostsOfTag(update.tagId, update.postsId) >>
-          Logger[F].info(s"updating tag with id = ${update.tagId}").pure[F]
+          Logger[F].info(s"updating tag with id = ${update.tagId}")
       )
       .map(_ => ())
 
@@ -86,7 +85,7 @@ case class TagStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .transact(tx)
       .flatTap(_ =>
         deleteTagFromPosts(delete.tagId) >>
-          Logger[F].info(s"deleting tag with id = ${delete.tagId}").pure[F]
+          Logger[F].info(s"deleting tag with id = ${delete.tagId}")
       )
       .map(_ => ())
 

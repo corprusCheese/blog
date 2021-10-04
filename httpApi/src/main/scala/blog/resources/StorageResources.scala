@@ -1,5 +1,6 @@
 package blog.resources
 
+import blog.config.types.{AppConfig, PostgresConfig, RedisConfig}
 import cats._
 import cats.effect._
 import cats.implicits.catsSyntaxTuple3Parallel
@@ -9,6 +10,8 @@ import doobie.Transactor
 import doobie.util.transactor.Transactor.Aux
 import org.http4s.client.Client
 import org.typelevel.log4cats.Logger
+import eu.timepit.refined.auto._
+import eu.timepit.refined.cats._
 
 sealed abstract class StorageResources[F[_]] {
   val transactor: Aux[F, Unit]
@@ -17,21 +20,23 @@ sealed abstract class StorageResources[F[_]] {
 }
 
 object StorageResources {
-  def make[F[_]: Logger: Monad: Async: MkRedis: HttpClient: NonEmptyParallel]
-      : Resource[F, StorageResources[F]] = {
+  def make[F[_]: Logger: Monad: Async: MkRedis: HttpClient: NonEmptyParallel](
+      postgresConfig: PostgresConfig,
+      redisConfig: RedisConfig
+  ): Resource[F, StorageResources[F]] = {
     def postgresResource: Resource[F, Aux[F, Unit]] =
       Resource
         .pure[F, Aux[F, Unit]](
           Transactor.fromDriverManager[F](
-            "org.postgresql.Driver",
-            "jdbc:postgresql://0.0.0.0:5432/blog",
-            "admin",
-            "password"
+            postgresConfig.commonDriver,
+            postgresConfig.postgresUri,
+            postgresConfig.user,
+            postgresConfig.password
           )
         )
 
     def redisResource: Resource[F, RedisCommands[F, String, String]] =
-      Redis[F].utf8("redis://0.0.0.0")
+      Redis[F].utf8(redisConfig.uri)
 
     def clientResource: Resource[F, Client[F]] = HttpClient[F].newEmber
 

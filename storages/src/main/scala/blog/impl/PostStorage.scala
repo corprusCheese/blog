@@ -1,5 +1,6 @@
 package blog.impl
 
+import blog.config.types.PaginationOptions
 import blog.domain._
 import blog.domain.posts._
 import blog.storage.PostStorageDsl
@@ -13,33 +14,36 @@ import doobie.refined.implicits._
 import eu.timepit.refined.auto._
 import org.typelevel.log4cats.Logger
 import blog.meta._
+import cats.data.NonEmptyVector
 import doobie.Update
 import doobie.util.fragments.whereAndOpt
 import doobie.Fragments
 
-case class PostStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
-    extends PostStorageDsl[F] {
+case class PostStorage[F[_]: Logger: MonadCancelThrow](
+    tx: Transactor[F],
+    paginationOptions: PaginationOptions
+) extends PostStorageDsl[F] {
+
+  private val perPage: PerPage = paginationOptions.perPage
+
   override def findById(id: PostId): F[Option[Post]] =
     sql"""SELECT uuid, posts.message, user_id, deleted FROM posts WHERE uuid = ${id}"""
       .query[(PostId, PostMessage, UserId, Deleted)]
       .option
       .transact(tx)
-      .flatTap(_ => Logger[F].info(s"finding post by id = ${id}").pure[F])
+      .flatTap(_ => Logger[F].info(s"finding post by id = ${id}"))
       .map(_.map {
         case (postId, message, userId, deleted) =>
           Post(postId, message, userId, deleted)
       })
 
-  override def fetchForPagination(
-      page: Page,
-      perPage: PerPage
-  ): F[Vector[Post]] =
+  override def fetchForPagination(page: Page): F[Vector[Post]] =
     sql"""SELECT uuid, posts.message, user_id, deleted FROM posts WHERE deleted = false LIMIT ${perPage} OFFSET ${page * perPage}"""
       .query[(PostId, PostMessage, UserId, Deleted)]
       .to[Vector]
       .transact(tx)
       .flatTap(_ =>
-        Logger[F].info(s"fetching next ${perPage} for page ${page}").pure[F]
+        Logger[F].info(s"fetching next ${perPage} for page ${page}")
       )
       .map(_.map {
         case (postId, message, userId, deleted) =>
@@ -51,25 +55,26 @@ case class PostStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .query[(PostId, PostMessage, UserId, Deleted)]
       .to[Vector]
       .transact(tx)
-      .flatTap(_ =>
-        Logger[F].info(s"fetching all post of user id = ${userId}").pure[F]
-      )
+      .flatTap(_ => Logger[F].info(s"fetching all post of user id = ${userId}"))
       .map(_.map {
         case (postId, message, userId, deleted) =>
           Post(postId, message, userId, deleted)
       })
 
-  override def getPostsWithTagsWithPagination(
-      tagId: TagId,
-      page: Page,
-      perPage: PerPage
+  override def fetchPostForPaginationWithTags(
+      tagIds: NonEmptyVector[TagId],
+      page: Page
   ): F[Vector[Post]] =
-    sql"""SELECT uuid, posts.message, user_id, deleted FROM posts JOIN posts_tags ON posts.uuid = posts_tags.post_id WHERE posts_tags.tag_id = ${tagId} LIMIT ${perPage} OFFSET ${page * perPage}"""
+    (fr"SELECT uuid, posts.message, user_id, deleted FROM posts JOIN posts_tags ON posts.uuid = posts_tags.post_id WHERE " ++ Fragments
+      .in(
+        fr"posts_tags.tag_id",
+        tagIds
+      ) ++ fr" LIMIT ${perPage} OFFSET ${page * perPage}")
       .query[(PostId, PostMessage, UserId, Deleted)]
       .to[Vector]
       .transact(tx)
       .flatTap(_ =>
-        Logger[F].info(s"fetching next ${perPage} for page ${page}").pure[F]
+        Logger[F].info(s"fetching next ${perPage} for page ${page}")
       )
       .map(_.map {
         case (postId, message, userId, deleted) =>
@@ -82,7 +87,6 @@ case class PostStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .flatMap(_ =>
         addTagsToPost(create.postId, create.tagsId) >> Logger[F]
           .info("creating new post")
-          .pure[F]
       )
       .map(_ => ())
 
@@ -92,7 +96,6 @@ case class PostStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .flatMap(_ =>
         updateTagsOfPost(update.postId, update.tagsId) >> Logger[F]
           .info(s"updating post with id = ${update.postId}")
-          .pure[F]
       )
       .map(_ => ())
 
@@ -102,7 +105,6 @@ case class PostStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .flatMap(_ =>
         deletePostFromTags(delete.postId) >> Logger[F]
           .info(s"deleting post with id = ${delete.postId}")
-          .pure[F]
       )
       .map(_ => ())
 
@@ -125,7 +127,8 @@ case class PostStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
 
 object PostStorage {
   def resource[F[_]: Logger: MonadCancelThrow](
-      tx: transactor.Transactor[F]
+      tx: transactor.Transactor[F],
+      paginationOptions: PaginationOptions
   ): Resource[F, PostStorageDsl[F]] =
-    Resource.pure[F, PostStorage[F]](PostStorage[F](tx))
+    Resource.pure[F, PostStorage[F]](PostStorage[F](tx, paginationOptions))
 }

@@ -1,5 +1,6 @@
 package blog.impl
 
+import blog.config.types.{JwtAccessTokenKey, TokenExpiration}
 import blog.domain
 import blog.domain._
 import blog.storage._
@@ -10,13 +11,15 @@ import org.typelevel.log4cats.Logger
 import pdi.jwt._
 import cats.implicits._
 import io.circe.syntax._
+import eu.timepit.refined.auto._
 
 import java.time.Clock
 import java.util.UUID
 import scala.concurrent.duration.FiniteDuration
 
 case class TokenManager[F[_]: Monad: Sync: Logger](
-    tokenExpiration: FiniteDuration
+    tokenExpiration: TokenExpiration,
+    jwtAccessTokenKeyConfig: JwtAccessTokenKey
 ) extends TokenManagerDsl[F] {
 
   private implicit val clock: F[Clock] = Sync[F].delay(Clock.systemUTC())
@@ -28,16 +31,17 @@ case class TokenManager[F[_]: Monad: Sync: Logger](
       claim <- Sync[F].delay(
         JwtClaim(uuid.asJson.noSpaces)
           .issuedNow(clock)
-          .expiresIn(tokenExpiration.toSeconds)(clock)
+          .expiresIn(tokenExpiration.timeout.toSeconds)(clock)
       )
-      secretKey = JwtSecretKey("secret")
+      secretKey = JwtSecretKey(jwtAccessTokenKeyConfig.value)
       token <- jwtEncode[F](claim, secretKey, JwtAlgorithm.HS256)
     } yield token
 }
 
 object TokenManager {
   def resource[F[_]: Logger: Monad: Sync](
-      tokenExpiration: FiniteDuration = tokenExpirationDefault
+      tokenExpiration: TokenExpiration,
+      jwtAccessTokenKeyConfig: JwtAccessTokenKey
   ): Resource[F, TokenManagerDsl[F]] =
-    Resource.pure(TokenManager[F](tokenExpiration))
+    Resource.pure(TokenManager[F](tokenExpiration, jwtAccessTokenKeyConfig))
 }

@@ -16,9 +16,6 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 package object domain {
 
-  // constants
-  val tokenExpirationDefault: FiniteDuration = 60.minutes
-
   // not refined
   type Deleted = Boolean
   type LTree = String
@@ -77,58 +74,4 @@ package object domain {
   @newtype
   case class TagName(value: NonEmptyString)
 
-  // json requests
-  @derive(decoder, encoder)
-  case class LoginUser(
-      username: Username,
-      password: Password
-  )
-
-  // posts
-
-  @derive(decoder, encoder)
-  case class PostCreation(message: PostMessage, tagIds: Option[Vector[TagId]])
-
-  @derive(decoder, encoder)
-  case class PostChanging(
-      postId: PostId,
-      message: PostMessage,
-      tagIds: Option[Vector[TagId]]
-  )
-
-  @derive(decoder, encoder)
-  case class PostRemoving(postId: PostId)
-
-  // tags
-
-  @derive(decoder, encoder)
-  case class TagCreation(name: TagName, postId: Option[PostId])
-
-  @derive(decoder, encoder)
-  case class TagChanging(
-      tagId: TagId,
-      name: TagName,
-      postIds: Option[Vector[PostId]]
-  )
-
-  @derive(decoder, encoder)
-  case class TagRemoving(tagId: TagId)
-
-  // comments
-
-  @derive(decoder, encoder)
-  case class CommentCreation(
-      message: CommentMessage,
-      postId: PostId,
-      commentId: Option[CommentId]
-  )
-
-  @derive(decoder, encoder)
-  case class CommentChanging(
-      commentId: CommentId,
-      message: CommentMessage
-  )
-
-  @derive(decoder, encoder)
-  case class CommentRemoving(commentId: CommentId)
 }

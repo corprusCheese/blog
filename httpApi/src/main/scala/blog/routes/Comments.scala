@@ -3,6 +3,7 @@ package blog.routes
 import blog.domain.comments._
 import blog.domain._
 import blog.domain.users.User
+import blog.domain.requests._
 import blog.errors._
 import blog.storage.{CommentStorageDsl, PostStorageDsl}
 import cats.MonadThrow

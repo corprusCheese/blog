@@ -18,7 +18,7 @@ case class UserStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .query[(UserId, Username, HashedPassword, Deleted)]
       .option
       .transact(tx)
-      .flatTap(_ => Logger[F].info(s"finding user by id = ${id}").pure[F])
+      .flatTap(_ => Logger[F].info(s"finding user by id = ${id}"))
       .map(_.map {
         case (userId, username, password, deleted) =>
           User(userId, username, password, deleted)
@@ -29,7 +29,7 @@ case class UserStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .query[(UserId, Username, HashedPassword, Deleted)]
       .option
       .transact(tx)
-      .flatTap(_ => Logger[F].info(s"finding by name ${name}").pure[F])
+      .flatTap(_ => Logger[F].info(s"finding by name ${name}"))
       .map(_.map {
         case (userId, username, password, deleted) =>
           User(userId, username, password, deleted)
@@ -40,7 +40,7 @@ case class UserStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .query[(UserId, Username, HashedPassword, Deleted)]
       .to[Vector]
       .transact(tx)
-      .flatTap(_ => Logger[F].info("fetching all users").pure[F])
+      .flatTap(_ => Logger[F].info("fetching all users"))
       .map(_.map {
         case (userId, username, password, deleted) =>
           User(userId, username, password, deleted)
@@ -49,14 +49,14 @@ case class UserStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
   override def create(create: UserCreate): F[Unit] =
     sql"""INSERT INTO users (uuid, name, password) VALUES (${create.userId}, ${create.username}, ${create.password})""".update.run
       .transact(tx)
-      .flatTap(_ => Logger[F].info("creating new user").pure[F])
+      .flatTap(_ => Logger[F].info("creating new user"))
       .map(_ => ())
 
   override def update(update: UserUpdate): F[Unit] =
     sql"""UPDATE users SET name = ${update.username}, password = MD5(${update.password}) WHERE uuid = ${update.userId}""".update.run
       .transact(tx)
       .flatTap(_ =>
-        Logger[F].info(s"updating user with id = ${update.userId}").pure[F]
+        Logger[F].info(s"updating user with id = ${update.userId}")
       )
       .map(_ => ())
 
@@ -64,7 +64,7 @@ case class UserStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
     sql"""UPDATE users SET deleted = true WHERE uuid = ${delete.userId}""".update.run
       .transact(tx)
       .flatTap(_ =>
-        Logger[F].info(s"deleting user with id = ${delete.userId}").pure[F]
+        Logger[F].info(s"deleting user with id = ${delete.userId}")
       )
       .map(_ => ())
 }

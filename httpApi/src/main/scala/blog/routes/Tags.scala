@@ -4,6 +4,7 @@ import blog.domain._
 import blog.domain.tags.{TagCreate, TagUpdate}
 import blog.domain.users._
 import blog.errors._
+import blog.domain.requests._
 import blog.storage.{PostStorageDsl, TagStorageDsl}
 import blog.utils.ext.refined._
 import cats.MonadThrow
@@ -86,47 +87,42 @@ final case class Tags[F[_]: JsonDecoder: MonadThrow](
       noStackTrace: NoStackTrace
   ): Vector[PostId] =
     vec match {
-      case None if postIds.nonEmpty =>
-        throw noStackTrace
-      case Some(vector)
-          if (postIds.getOrElse(Vector.empty[PostId]) != vector) =>
-        throw noStackTrace
-      case None if postIds.isEmpty => Vector.empty[PostId]
-      case Some(vector)
-          if (postIds.getOrElse(Vector.empty[PostId]) == vector) =>
+      case Some(vector) if postIds.getOrElse(Vector.empty[PostId]) == vector =>
         vector
+      case None if postIds.isEmpty => Vector.empty[PostId]
+      case _                       => throw noStackTrace
     }
 
   private val httpRoutes: HttpRoutes[F] = HttpRoutes.of[F] {
     case req @ GET -> Root / "all" =>
       tagStorage.fetchAll
-        .flatMap{
-          case v if v.isEmpty => NotFound("no tags at all")
+        .flatMap {
           case v if v.nonEmpty => Ok(v)
+          case _  => NotFound("no tags at all")
         }
 
     case req @ GET -> Root / "post" / postId =>
       tagStorage
         .getAllPostTags(PostId(UUID.fromString(postId)))
-        .flatMap{
-          case v if v.isEmpty => NotFound("no tags of such post")
+        .flatMap {
           case v if v.nonEmpty => Ok(v)
+          case _  => NotFound("no tags of such post")
         }
 
     case req @ GET -> Root / tagId =>
       tagStorage
         .findById(TagId(UUID.fromString(tagId)))
-        .flatMap{
-          case v if v.isEmpty => NotFound("no tags with such id")
+        .flatMap {
           case v if v.nonEmpty => Ok(v)
+          case _  => NotFound("no tags with such id")
         }
 
     case req @ GET -> Root / tagName =>
       tagStorage
         .findByName(TagName(NonEmptyString.unsafeFrom(tagName)))
-        .flatMap{
-          case v if v.isEmpty => NotFound("no tag with such name")
+        .flatMap {
           case v if v.nonEmpty => Ok(v)
+          case _  => NotFound("no tag with such name")
         }
   }
 

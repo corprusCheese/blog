@@ -37,3 +37,11 @@ services:
       - POSTGRES_URL=jdbc:postgresql://0.0.0.0:5433/blog
     volumes:
       - ./project/migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
+  redis_test:
+    container_name: redis_test
+    restart: always
+    image: redis:6.2.0
+    ports:
+      - "6380:6379"
+    environment:
+      - DEBUG=false

@@ -2,7 +2,8 @@ package blog.routes
 
 import blog.domain._
 import blog.domain.users.User
-import blog.errors.{CustomError, LoginError, RegisterError}
+import blog.errors._
+import blog.domain.requests._
 import blog.storage.AuthCommandsDsl
 import blog.utils.PassHasher
 import blog.utils.ext.refined._

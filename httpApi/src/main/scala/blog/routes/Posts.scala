@@ -3,10 +3,13 @@ package blog.routes
 import blog.domain._
 import blog.domain.posts._
 import blog.domain.users._
+import blog.domain.requests._
+
 import blog.errors._
 import blog.storage.{CommentStorageDsl, PostStorageDsl, TagStorageDsl}
 import blog.utils.ext.refined._
 import cats.MonadThrow
+import cats.data.NonEmptyVector
 import cats.syntax.all._
 import eu.timepit.refined.auto._
 import eu.timepit.refined.types.numeric._
@@ -87,63 +90,69 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
 
   private val httpRoutes: HttpRoutes[F] = HttpRoutes.of[F] {
     case req @ GET -> Root / "all" =>
-      val pagination = getPaginationParams(req)
+      val page = getPage(req)
       postStorage
-        .fetchForPagination(pagination._1, pagination._2)
-        .flatMap{
-          case v if v.isEmpty => NotFound(s"no next ${pagination._2} posts on page ${pagination._1}")
+        .fetchForPagination(getPage(req))
+        .flatMap {
           case v if v.nonEmpty => Ok(v)
+          case _               => NotFound(s"no posts on page ${page}")
         }
 
     case req @ GET -> Root / "user" / userId =>
       postStorage
         .getAllUserPosts(UserId(UUID.fromString(userId)))
-        .flatMap{
-          case v if v.isEmpty => NotFound("no posts for such user")
+        .flatMap {
           case v if v.nonEmpty => Ok(v)
+          case _               => NotFound("no posts for such user")
         }
 
     case req @ GET -> Root / postId =>
       postStorage
         .findById(PostId(UUID.fromString(postId)))
-        .flatMap{
-          case v if v.isEmpty => NotFound("no posts with such id")
+        .flatMap {
           case v if v.nonEmpty => Ok(v)
+          case _               => NotFound("no posts with such id")
         }
 
     case req @ GET -> Root / "tag" / tagId =>
-      val pagination = getPaginationParams(req)
       postStorage
-        .getPostsWithTagsWithPagination(
-          TagId(UUID.fromString(tagId)),
-          pagination._1,
-          pagination._2
+        .fetchPostForPaginationWithTags(
+          NonEmptyVector.one(TagId(UUID.fromString(tagId))),
+          getPage(req)
         )
-        .flatMap{
-          case v if v.isEmpty => NotFound("no post with this tag")
+        .flatMap {
+          case v if v.isEmpty  => NotFound("no post with this tag")
           case v if v.nonEmpty => Ok(v)
         }
+
+    // it is POST query because url is limited
+    case req @ POST -> Root / "tags" =>
+      req.decodeR[PostFilteredByTags] { filter =>
+        postStorage
+          .fetchPostForPaginationWithTags(
+            filter.tagIds,
+            getPage(req)
+          )
+          .flatMap {
+            case v if v.nonEmpty => Ok(v)
+            case _               => NotFound("no post with such tags")
+          }
+      }
+
   }
 
   private def postBelongsToUser(
       userId: UserId,
       postId: PostId
   ): F[Option[Post]] =
-    postStorage.findById(postId).map{
-      case None => none[Post]
+    postStorage.findById(postId).map {
+      case None       => none[Post]
       case Some(post) => if (post.userId == userId) post.some else none[Post]
     }
 
-  private def getPaginationParams(req: Request[F]): (Page, PerPage) = {
-    val page: Int =
-      try { req.params("page").toInt }
-      catch { case _: Throwable => 0 }
-    val perPage: Int =
-      try { req.params("perPage").toInt }
-      catch { case _: Throwable => 5 }
-
-    (NonNegInt.unsafeFrom(page), NonNegInt.unsafeFrom(perPage))
-  }
+  private def getPage(req: Request[F]): Page =
+    try { NonNegInt.unsafeFrom(req.params("page").toInt) }
+    catch { case _: Throwable => 0 }
 
   def routes(authMiddleware: AuthMiddleware[F, User]): HttpRoutes[F] =
     Router(
