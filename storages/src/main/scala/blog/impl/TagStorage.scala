@@ -17,49 +17,49 @@ import doobie.util.fragments.whereAndOpt
 case class TagStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
     extends TagStorageDsl[F] {
   override def findById(id: TagId): F[Option[Tag]] =
-    sql"""SELECT uuid, name, deleted FROM tags WHERE uuid = ${id}"""
-      .query[(TagId, TagName, Deleted)]
+    sql"""SELECT uuid, name FROM tags WHERE uuid = ${id} AND deleted = false"""
+      .query[(TagId, TagName)]
       .option
       .transact(tx)
       .flatTap(_ => Logger[F].info(s"finding tag by id = ${id}"))
       .map(_.map {
-        case (tagId, tagName, deleted) =>
-          Tag(tagId, tagName, deleted)
+        case (tagId, tagName) =>
+          Tag(tagId, tagName)
       })
 
   override def fetchAll: F[Vector[Tag]] =
-    sql"""SELECT uuid, name, deleted FROM tags WHERE deleted = false"""
-      .query[(TagId, TagName, Deleted)]
+    sql"""SELECT uuid, name FROM tags WHERE deleted = false"""
+      .query[(TagId, TagName)]
       .to[Vector]
       .transact(tx)
       .flatTap(_ => Logger[F].info(s"finding all tags"))
       .map(_.map {
-        case (tagId, tagName, deleted) =>
-          Tag(tagId, tagName, deleted)
+        case (tagId, tagName) =>
+          Tag(tagId, tagName)
       })
 
   override def findByName(name: TagName): F[Vector[Tag]] =
-    sql"""SELECT uuid, name, deleted FROM tags where name = ${name}"""
-      .query[(TagId, TagName, Deleted)]
+    sql"""SELECT uuid, name FROM tags WHERE name = ${name} AND deleted = false"""
+      .query[(TagId, TagName)]
       .to[Vector]
       .transact(tx)
       .flatTap(_ => Logger[F].info(s"finding tags by name = ${name}"))
       .map(_.map {
-        case (tagId, tagName, deleted) =>
-          Tag(tagId, tagName, deleted)
+        case (tagId, tagName) =>
+          Tag(tagId, tagName)
       })
 
   override def getAllPostTags(postId: PostId): F[Vector[Tag]] =
     sql"""SELECT uuid, name, deleted FROM tags JOIN posts_tags ON tags.uuid = posts_tags.tag_id WHERE post_id = ${postId} AND deleted = false"""
-      .query[(TagId, TagName, Deleted)]
+      .query[(TagId, TagName)]
       .to[Vector]
       .transact(tx)
       .flatTap(_ =>
         Logger[F].info(s"finding tags by post_id = ${postId}")
       )
       .map(_.map {
-        case (tagId, tagName, deleted) =>
-          Tag(tagId, tagName, deleted)
+        case (tagId, tagName) =>
+          Tag(tagId, tagName)
       })
 
   override def create(create: TagCreate): F[Unit] =

@@ -14,6 +14,7 @@ import org.http4s.circe.JsonDecoder
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.{AuthMiddleware, Router}
 import blog.utils.ext.refined._
+import io.circe.Encoder.AsArray.importedAsArrayEncoder
 
 import java.util.UUID
 
@@ -47,7 +48,7 @@ final case class Comments[F[_]: JsonDecoder: MonadThrow](
       ar.req.decodeR[CommentChanging] { update =>
         commentBelongsToUser(user.uuid, update.commentId).flatMap {
           case None => throw CommentDontBelongToUser
-          case Some(comment) =>
+          case Some(comment: Comment) =>
             commentStorage
               .update(
                 UpdateComment(
@@ -60,6 +61,7 @@ final case class Comments[F[_]: JsonDecoder: MonadThrow](
               .recoverWith {
                 case e: CustomError => BadRequest(e.msg)
               }
+          case Some(_: DeletedComment) => throw CommentNotExists
         }
       }
 
@@ -67,7 +69,7 @@ final case class Comments[F[_]: JsonDecoder: MonadThrow](
       ar.req.decodeR[CommentRemoving] { delete =>
         commentBelongsToUser(user.uuid, delete.commentId).flatMap {
           case None => throw CommentNotExists
-          case Some(comment) =>
+          case Some(comment: Comment) =>
             commentStorage
               .delete(DeleteComment(comment.commentId))
               .flatMap(_ => Ok("Comment deleted"))
@@ -75,6 +77,7 @@ final case class Comments[F[_]: JsonDecoder: MonadThrow](
               .recoverWith {
                 case e: CustomError => BadRequest(e.msg)
               }
+          case Some(_: DeletedComment) => throw CommentAlreadyDeleted
         }
       }
   }
@@ -95,39 +98,39 @@ final case class Comments[F[_]: JsonDecoder: MonadThrow](
   private def commentBelongsToUser(
       userId: UserId,
       commentId: CommentId
-  ): F[Option[Comment]] =
+  ): F[Option[CustomComment]] =
     commentStorage.findById(commentId).map {
-      case None => none[Comment]
+      case None => none[CustomComment]
       case Some(comment) =>
-        if (comment.userId == userId) comment.some else none[Comment]
+        if (comment.userId == userId) comment.some else none[CustomComment]
     }
 
   private val httpRoutes: HttpRoutes[F] = HttpRoutes.of[F] {
-    case req @ GET -> Root / "all" =>
-      commentStorage.fetchAll.flatMap{
-        case v if v.isEmpty => NotFound("no comments at all")
+    case GET -> Root / "all" =>
+      commentStorage.fetchAll.flatMap {
         case v if v.nonEmpty => Ok(v)
+        case _               => NotFound("no comments at all")
       }
-    case req @ GET -> Root / commentId =>
+    case GET -> Root / commentId =>
       commentStorage
         .findById(CommentId(UUID.fromString(commentId)))
-        .flatMap{
-          case v if v.isEmpty => NotFound("no comments with such id")
+        .flatMap {
           case v if v.nonEmpty => Ok(v)
+          case _               => NotFound("no comments with such id")
         }
-    case req @ GET -> Root / "post" / postId =>
+    case GET -> Root / "post" / postId =>
       commentStorage
         .getAllPostComments(PostId(UUID.fromString(postId)))
-        .flatMap{
-          case v if v.isEmpty => NotFound("no comments of such post id")
+        .flatMap {
           case v if v.nonEmpty => Ok(v)
+          case _               => NotFound("no comments of such post id")
         }
-    case req @ GET -> Root / "user" / userId =>
+    case GET -> Root / "user" / userId =>
       commentStorage
-        .getAllUserComments(UserId(UUID.fromString(userId)))
-        .flatMap{
-          case v if v.isEmpty => NotFound("no comments of such user id")
+        .getActiveUserComments(UserId(UUID.fromString(userId)))
+        .flatMap {
           case v if v.nonEmpty => Ok(v)
+          case _               => NotFound("no comments of such user id")
         }
   }
 

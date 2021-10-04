@@ -1,15 +1,18 @@
 package blog.routes
 
 import blog.domain._
-import blog.domain.tags.{TagCreate, TagUpdate}
+import blog.domain.requests._
+import blog.domain.tags._
 import blog.domain.users._
 import blog.errors._
-import blog.domain.requests._
 import blog.storage.{PostStorageDsl, TagStorageDsl}
 import blog.utils.ext.refined._
 import cats.MonadThrow
+import cats.data.NonEmptyVector
 import cats.syntax.all._
 import eu.timepit.refined.types.all.NonEmptyString
+import eu.timepit.refined.auto._
+import eu.timepit.refined.cats._
 import org.http4s._
 import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 import org.http4s.circe.JsonDecoder
@@ -17,7 +20,6 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.server.{AuthMiddleware, Router}
 
 import java.util.UUID
-import scala.util.control.NoStackTrace
 
 final case class Tags[F[_]: JsonDecoder: MonadThrow](
     tagStorage: TagStorageDsl[F],
@@ -25,7 +27,7 @@ final case class Tags[F[_]: JsonDecoder: MonadThrow](
 ) extends Http4sDsl[F] {
 
   private val httpRoutesAuth: AuthedRoutes[User, F] = AuthedRoutes.of {
-    case ar @ POST -> Root / "create" as user =>
+    case ar @ POST -> Root / "create" as _ =>
       ar.req.decodeR[TagCreation] { create =>
         tagStorage
           .create(
@@ -45,16 +47,15 @@ final case class Tags[F[_]: JsonDecoder: MonadThrow](
 
     case ar @ POST -> Root / "update" as user =>
       ar.req.decodeR[TagChanging] { update =>
-        getUserPostIds(user.uuid, update.postIds)
-          .map(x => getVector(x, update.postIds, UpdateTagWithNotYoursPosts))
-          .flatMap(vec => {
-            println(vec)
-            tagStorage
+        canUserUpdateAllRequestedPosts(user.uuid, update.postIds)
+          .flatMap {
+            case false => throw UpdateTagWithNotYoursPosts
+            case true => tagStorage
               .update(
                 TagUpdate(
                   update.tagId,
                   update.name,
-                  vec
+                  update.postIds.get.toVector
                 )
               )
               .flatMap(_ => Ok("Tag updated"))
@@ -62,67 +63,57 @@ final case class Tags[F[_]: JsonDecoder: MonadThrow](
               .recoverWith {
                 case e: CustomError => BadRequest(e.msg)
               }
-          })
+          }
+
       }
   }
 
-  private def getUserPostIds(
+  private def canUserUpdateAllRequestedPosts(
       userId: UserId,
-      postIds: Option[Vector[PostId]]
-  ): F[Option[Vector[PostId]]] =
+      postIds: Option[NonEmptyVector[PostId]]
+  ): F[Boolean] =
     postIds match {
-      case None => none[Vector[PostId]].pure[F]
-      case Some(vector) =>
+      case None => false.pure[F]
+      case Some(requestedPostIds) =>
         postStorage
           .getAllUserPosts(userId)
-          .map(_.filter(p => vector.contains(p.postId)))
-          .map(v =>
-            if (v.isEmpty) none[Vector[PostId]] else v.map(_.postId).some
-          )
-    }
-
-  private def getVector(
-      vec: Option[Vector[PostId]],
-      postIds: Option[Vector[PostId]],
-      noStackTrace: NoStackTrace
-  ): Vector[PostId] =
-    vec match {
-      case Some(vector) if postIds.getOrElse(Vector.empty[PostId]) == vector =>
-        vector
-      case None if postIds.isEmpty => Vector.empty[PostId]
-      case _                       => throw noStackTrace
+          .map(_.map(_.postId).intersect(requestedPostIds.toVector))
+          .map {
+            case v if v.isEmpty => false
+            case v              => NonEmptyVector.fromVectorUnsafe(v) == requestedPostIds
+          }
     }
 
   private val httpRoutes: HttpRoutes[F] = HttpRoutes.of[F] {
-    case req @ GET -> Root / "all" =>
+    case GET -> Root / "all" =>
       tagStorage.fetchAll
         .flatMap {
           case v if v.nonEmpty => Ok(v)
-          case _  => NotFound("no tags at all")
+          case _               => NotFound("no tags at all")
         }
 
-    case req @ GET -> Root / "post" / postId =>
+    case GET -> Root / "post" / postId =>
       tagStorage
         .getAllPostTags(PostId(UUID.fromString(postId)))
         .flatMap {
           case v if v.nonEmpty => Ok(v)
-          case _  => NotFound("no tags of such post")
+          case _               => NotFound("no tags of such post")
         }
 
-    case req @ GET -> Root / tagId =>
+    case GET -> Root / tagId =>
       tagStorage
         .findById(TagId(UUID.fromString(tagId)))
         .flatMap {
           case v if v.nonEmpty => Ok(v)
-          case _  => NotFound("no tags with such id")
+          case _               => NotFound("no tags with such id")
         }
 
-    case req @ GET -> Root / tagName =>
+    case GET -> Root / tagName =>
       tagStorage
         .findByName(TagName(NonEmptyString.unsafeFrom(tagName)))
         .flatMap {
           case v if v.nonEmpty => Ok(v)
-          case _  => NotFound("no tag with such name")
+          case _               => NotFound("no tag with such name")
         }
   }
 

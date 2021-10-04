@@ -49,4 +49,5 @@ object errors {
   // it is for later, only admin can delete tags
   case object TagNotExists extends CustomError("Such tag id not exists")
 
+  case object CommentAlreadyDeleted extends CustomError("You are trying to delete deleted comment")
 }

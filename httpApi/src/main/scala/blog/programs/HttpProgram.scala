@@ -33,7 +33,7 @@ object HttpProgram {
           ps <- PostStorage.resource(res.transactor, appConfig.paginationOptions)
           tm <- TokenManager.resource(appConfig.tokenExpiration, appConfig.jwtAccessTokenKey)
           ac = AuthCommands.make(res.redis, us, tm, appConfig.tokenExpiration)
-          middleware = commonAuthMiddleware(res.redis)
+          middleware = commonAuthMiddleware(res.redis, appConfig.jwtSecretKey)
         } yield getAll[F](ac, us, cs, ts, ps, middleware)
 
         routes

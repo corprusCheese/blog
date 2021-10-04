@@ -3,7 +3,6 @@ package blog.domain
 import derevo.cats._
 import derevo.circe.magnolia._
 import derevo.derive
-import io.estatico.newtype.macros.newtype
 
 object users {
 
@@ -11,8 +10,7 @@ object users {
   case class User(
       uuid: UserId,
       username: Username,
-      password: HashedPassword,
-      deleted: Deleted = false
+      password: HashedPassword
   )
 
   case class UserCreate(

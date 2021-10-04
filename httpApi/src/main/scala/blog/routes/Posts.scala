@@ -26,7 +26,6 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
     commentStorage: CommentStorageDsl[F],
     tagStorage: TagStorageDsl[F]
 ) extends Http4sDsl[F] {
-
   private val httpRoutesAuth: AuthedRoutes[User, F] = AuthedRoutes.of {
     case ar @ POST -> Root / "create" as user =>
       ar.req.decodeR[PostCreation] { create =>
@@ -36,7 +35,7 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
               PostId(UUID.randomUUID()),
               create.message,
               user.uuid,
-              create.tagIds.getOrElse(Vector.empty[TagId])
+              if (create.tagIds.isEmpty) Vector.empty[TagId] else create.tagIds.get.toVector
             )
           )
           .flatMap(_ => Created("Post created"))
@@ -55,7 +54,7 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
                 UpdatePost(
                   update.postId,
                   update.message,
-                  update.tagIds.getOrElse(Vector.empty[TagId])
+                  if (update.tagIds.isEmpty) Vector.empty[TagId] else update.tagIds.get.toVector
                 )
               )
               .flatMap(_ => Ok("Post updated"))
@@ -95,10 +94,10 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
         .fetchForPagination(getPage(req))
         .flatMap {
           case v if v.nonEmpty => Ok(v)
-          case _               => NotFound(s"no posts on page ${page}")
+          case _               => NotFound(s"no posts on page $page")
         }
 
-    case req @ GET -> Root / "user" / userId =>
+    case GET -> Root / "user" / userId =>
       postStorage
         .getAllUserPosts(UserId(UUID.fromString(userId)))
         .flatMap {
@@ -106,7 +105,7 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
           case _               => NotFound("no posts for such user")
         }
 
-    case req @ GET -> Root / postId =>
+    case GET -> Root / postId =>
       postStorage
         .findById(PostId(UUID.fromString(postId)))
         .flatMap {

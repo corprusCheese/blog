@@ -3,21 +3,19 @@ package blog.impl
 import blog.config.types.PaginationOptions
 import blog.domain._
 import blog.domain.posts._
+import blog.meta._
 import blog.storage.PostStorageDsl
+import cats.data.NonEmptyVector
 import cats.effect.{MonadCancelThrow, Resource}
 import cats.implicits._
+import doobie.{Fragments, Update}
 import doobie.implicits._
-import doobie.util.transactor
-import doobie.util.transactor.Transactor
 import doobie.refined._
 import doobie.refined.implicits._
+import doobie.util.transactor
+import doobie.util.transactor.Transactor
 import eu.timepit.refined.auto._
 import org.typelevel.log4cats.Logger
-import blog.meta._
-import cats.data.NonEmptyVector
-import doobie.Update
-import doobie.util.fragments.whereAndOpt
-import doobie.Fragments
 
 case class PostStorage[F[_]: Logger: MonadCancelThrow](
     tx: Transactor[F],
@@ -27,58 +25,58 @@ case class PostStorage[F[_]: Logger: MonadCancelThrow](
   private val perPage: PerPage = paginationOptions.perPage
 
   override def findById(id: PostId): F[Option[Post]] =
-    sql"""SELECT uuid, posts.message, user_id, deleted FROM posts WHERE uuid = ${id}"""
-      .query[(PostId, PostMessage, UserId, Deleted)]
+    sql"""SELECT uuid, posts.message, user_id, deleted FROM posts WHERE uuid = ${id} AND deleted = false"""
+      .query[(PostId, PostMessage, UserId)]
       .option
       .transact(tx)
       .flatTap(_ => Logger[F].info(s"finding post by id = ${id}"))
       .map(_.map {
-        case (postId, message, userId, deleted) =>
-          Post(postId, message, userId, deleted)
+        case (postId, message, userId) =>
+          Post(postId, message, userId)
       })
 
   override def fetchForPagination(page: Page): F[Vector[Post]] =
-    sql"""SELECT uuid, posts.message, user_id, deleted FROM posts WHERE deleted = false LIMIT ${perPage} OFFSET ${page * perPage}"""
-      .query[(PostId, PostMessage, UserId, Deleted)]
+    sql"""SELECT uuid, posts.message, user_id FROM posts WHERE deleted = false LIMIT ${perPage} OFFSET ${page * perPage}"""
+      .query[(PostId, PostMessage, UserId)]
       .to[Vector]
       .transact(tx)
       .flatTap(_ =>
         Logger[F].info(s"fetching next ${perPage} for page ${page}")
       )
       .map(_.map {
-        case (postId, message, userId, deleted) =>
-          Post(postId, message, userId, deleted)
+        case (postId, message, userId) =>
+          Post(postId, message, userId)
       })
 
   override def getAllUserPosts(userId: UserId): F[Vector[Post]] =
-    sql"""SELECT uuid, posts.message, user_id, deleted FROM posts WHERE user_id = ${userId} AND deleted = false"""
-      .query[(PostId, PostMessage, UserId, Deleted)]
+    sql"""SELECT uuid, posts.message, user_id FROM posts WHERE user_id = ${userId} AND deleted = false"""
+      .query[(PostId, PostMessage, UserId)]
       .to[Vector]
       .transact(tx)
       .flatTap(_ => Logger[F].info(s"fetching all post of user id = ${userId}"))
       .map(_.map {
-        case (postId, message, userId, deleted) =>
-          Post(postId, message, userId, deleted)
+        case (postId, message, userId) =>
+          Post(postId, message, userId)
       })
 
   override def fetchPostForPaginationWithTags(
       tagIds: NonEmptyVector[TagId],
       page: Page
   ): F[Vector[Post]] =
-    (fr"SELECT uuid, posts.message, user_id, deleted FROM posts JOIN posts_tags ON posts.uuid = posts_tags.post_id WHERE " ++ Fragments
+    (fr"SELECT uuid, posts.message, user_id FROM posts JOIN posts_tags ON posts.uuid = posts_tags.post_id WHERE deleted = false AND " ++ Fragments
       .in(
         fr"posts_tags.tag_id",
         tagIds
       ) ++ fr" LIMIT ${perPage} OFFSET ${page * perPage}")
-      .query[(PostId, PostMessage, UserId, Deleted)]
+      .query[(PostId, PostMessage, UserId)]
       .to[Vector]
       .transact(tx)
       .flatTap(_ =>
         Logger[F].info(s"fetching next ${perPage} for page ${page}")
       )
       .map(_.map {
-        case (postId, message, userId, deleted) =>
-          Post(postId, message, userId, deleted)
+        case (postId, message, userId) =>
+          Post(postId, message, userId)
       })
 
   override def create(create: CreatePost): F[Unit] =

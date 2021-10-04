@@ -15,13 +15,13 @@ object requests {
   // posts
 
   @derive(decoder, encoder)
-  case class PostCreation(message: PostMessage, tagIds: Option[Vector[TagId]])
+  case class PostCreation(message: PostMessage, tagIds: Option[NonEmptyVector[TagId]])
 
   @derive(decoder, encoder)
   case class PostChanging(
       postId: PostId,
       message: PostMessage,
-      tagIds: Option[Vector[TagId]]
+      tagIds: Option[NonEmptyVector[TagId]]
   )
 
   @derive(decoder, encoder)
@@ -36,7 +36,7 @@ object requests {
   case class TagChanging(
       tagId: TagId,
       name: TagName,
-      postIds: Option[Vector[PostId]]
+      postIds: Option[NonEmptyVector[PostId]]
   )
 
   @derive(decoder, encoder)

@@ -9,10 +9,8 @@ import eu.timepit.refined.numeric._
 import eu.timepit.refined.types.string.NonEmptyString
 import io.circe.refined._
 import io.estatico.newtype.macros.newtype
-import eu.timepit.refined.auto._
 
 import java.util.UUID
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 package object domain {
 

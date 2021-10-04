@@ -3,16 +3,13 @@ package blog.domain
 import derevo.cats.{eqv, show}
 import derevo.circe.magnolia.{decoder, encoder}
 import derevo.derive
-import io.estatico.newtype.macros.newtype
-import jdk.incubator.vector.VectorOperators
 
 object posts {
   @derive(decoder, encoder, eqv, show)
   case class Post(
       postId: PostId,
       message: PostMessage,
-      userId: UserId,
-      deleted: Deleted = false
+      userId: UserId
   )
 
   case class CreatePost(

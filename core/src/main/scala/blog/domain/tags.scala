@@ -3,14 +3,12 @@ package blog.domain
 import derevo.cats.{eqv, show}
 import derevo.circe.magnolia.{decoder, encoder}
 import derevo.derive
-import io.estatico.newtype.macros.newtype
 
 object tags {
   @derive(decoder, encoder, eqv, show)
   case class Tag(
       tagId: TagId,
-      name: TagName,
-      deleted: Deleted = false
+      name: TagName
   )
 
   case class TagCreate(

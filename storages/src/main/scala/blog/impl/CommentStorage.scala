@@ -17,7 +17,7 @@ import doobie.Fragments
 
 case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
     extends CommentStorageDsl[F] {
-  override def findById(id: CommentId): F[Option[Comment]] =
+  override def findById(id: CommentId): F[Option[CustomComment]] =
     sql"""SELECT uuid, message, user_id, ltree2text(comment_path), deleted FROM comments WHERE uuid = ${id}"""
       .query[
         (CommentId, CommentMessage, UserId, CommentMaterializedPath, Deleted)
@@ -27,10 +27,11 @@ case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .flatTap(_ => Logger[F].info(s"finding comment by id = ${id}"))
       .map(_.map {
         case (commentId, message, userId, path, deleted) =>
-          Comment(commentId, message, userId, path, deleted)
+          if (deleted) DeletedComment(commentId, userId, path)
+          else Comment(commentId, message, userId, path)
       })
 
-  override def fetchAll: F[Vector[Comment]] =
+  override def fetchAll: F[Vector[CustomComment]] =
     sql"""SELECT uuid, message, user_id, ltree2text(comment_path), deleted FROM comments"""
       .query[
         (CommentId, CommentMessage, UserId, CommentMaterializedPath, Deleted)
@@ -40,41 +41,41 @@ case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .flatTap(_ => Logger[F].info(s"finding all comments"))
       .map(_.map {
         case (commentId, message, userId, path, deleted) =>
-          Comment(commentId, message, userId, path, deleted)
+          if (deleted) DeletedComment(commentId, userId, path)
+          else Comment(commentId, message, userId, path)
       })
 
-  override def getAllUserComments(
+  override def getActiveUserComments(
       userId: UserId
-  ): F[Vector[Comment]] =
-    sql"""SELECT uuid, message, user_id, ltree2text(comment_path), deleted FROM comments WHERE user_id = ${userId}"""
+  ): F[Vector[CustomComment]] =
+    sql"""SELECT uuid, message, user_id, ltree2text(comment_path) FROM comments WHERE user_id = ${userId} AND deleted = false"""
       .query[
-        (CommentId, CommentMessage, UserId, CommentMaterializedPath, Deleted)
+        (CommentId, CommentMessage, UserId, CommentMaterializedPath)
       ]
       .to[Vector]
       .transact(tx)
-      .flatTap(_ =>
-        Logger[F].info(s"finding comments of user id = ${userId}")
-      )
+      .flatTap(_ => Logger[F].info(s"finding comments of user id = ${userId}"))
       .map(_.map {
-        case (commentId, message, userId, path, deleted) =>
-          Comment(commentId, message, userId, path, deleted)
+        case (commentId, message, userId, path) =>
+          Comment(commentId, message, userId, path)
       })
 
   override def getAllPostComments(
       postId: PostId
-  ): F[Vector[Comment]] =
-    sql"""SELECT uuid, message, user_id, ltree2text(comment_path), deleted FROM comments WHERE comment_path <@ text2ltree(${CommentMaterializedPath(postId.toString)})"""
+  ): F[Vector[CustomComment]] =
+    sql"""SELECT uuid, message, user_id, ltree2text(comment_path), deleted FROM comments WHERE comment_path <@ text2ltree(${CommentMaterializedPath(
+      postId.toString
+    )})"""
       .query[
         (CommentId, CommentMessage, UserId, CommentMaterializedPath, Deleted)
       ]
       .to[Vector]
       .transact(tx)
-      .flatTap(_ =>
-        Logger[F].info(s"finding comments of post id = ${postId}")
-      )
+      .flatTap(_ => Logger[F].info(s"finding comments of post id = ${postId}"))
       .map(_.map {
         case (commentId, message, userId, path, deleted) =>
-          Comment(commentId, message, userId, path, deleted)
+          if (deleted) DeletedComment(commentId, userId, path)
+          else Comment(commentId, message, userId, path)
       })
 
   override def update(update: UpdateComment): F[Unit] =
@@ -105,8 +106,9 @@ case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
       .map(_ => ())
 
   override def deleteAllPostComments(postId: PostId): F[Unit] =
-    sql"""UPDATE comments SET deleted = true WHERE comment_path <@ text2ltree(${CommentMaterializedPath(postId.toString)})"""
-      .update.run
+    sql"""UPDATE comments SET deleted = true WHERE comment_path <@ text2ltree(${CommentMaterializedPath(
+      postId.toString
+    )})""".update.run
       .transact(tx)
       .flatTap(_ =>
         Logger[F].info(s"delete all comments of post id = ${postId}")

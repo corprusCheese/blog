@@ -66,7 +66,7 @@ object PostgresTest extends IOSuite with Checkers {
             o.nonEmpty,
             y.nonEmpty,
             z.nonEmpty,
-            q.nonEmpty && q.get.deleted
+            q.isEmpty
           )
         )
       }
@@ -110,7 +110,7 @@ object PostgresTest extends IOSuite with Checkers {
                 y.nonEmpty,
                 z.nonEmpty,
                 u.isEmpty,
-                q.nonEmpty && q.head.deleted
+                q.isEmpty
               )
             )
           )
@@ -166,7 +166,7 @@ object PostgresTest extends IOSuite with Checkers {
                     y.isEmpty,
                     z.nonEmpty,
                     q.nonEmpty,
-                    p.nonEmpty && p.get.deleted,
+                    p.isEmpty,
                     h.isEmpty
                   )
                 )
@@ -219,12 +219,12 @@ object PostgresTest extends IOSuite with Checkers {
                     y <- cs.getAllPostComments(post.postId)
                     t <- cs.fetchAll
                     _ <- cs.delete(DeleteComment(comment.commentId))
-                    z <- cs.getAllUserComments(post.userId)
+                    z <- cs.getActiveUserComments(post.userId)
                   } yield expect.all(
                     x.nonEmpty,
                     y.nonEmpty,
                     t.nonEmpty,
-                    z.nonEmpty && z.head.deleted
+                    z.isEmpty
                   )
                 )
               )

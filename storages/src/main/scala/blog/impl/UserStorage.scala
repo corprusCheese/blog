@@ -14,36 +14,36 @@ case class UserStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
     extends UserStorageDsl[F] {
 
   override def findById(id: UserId): F[Option[User]] =
-    sql"""SELECT uuid, name, password, deleted FROM users WHERE uuid = ${id}"""
-      .query[(UserId, Username, HashedPassword, Deleted)]
+    sql"""SELECT uuid, name, password, deleted FROM users WHERE uuid = ${id} AND deleted = false"""
+      .query[(UserId, Username, HashedPassword)]
       .option
       .transact(tx)
       .flatTap(_ => Logger[F].info(s"finding user by id = ${id}"))
       .map(_.map {
-        case (userId, username, password, deleted) =>
-          User(userId, username, password, deleted)
+        case (userId, username, password) =>
+          User(userId, username, password)
       })
 
   override def findByName(name: Username): F[Option[User]] =
-    sql"""SELECT uuid, name, password, deleted FROM users WHERE name = ${name}"""
-      .query[(UserId, Username, HashedPassword, Deleted)]
+    sql"""SELECT uuid, name, password, deleted FROM users WHERE name = ${name} AND deleted = false"""
+      .query[(UserId, Username, HashedPassword)]
       .option
       .transact(tx)
       .flatTap(_ => Logger[F].info(s"finding by name ${name}"))
       .map(_.map {
-        case (userId, username, password, deleted) =>
-          User(userId, username, password, deleted)
+        case (userId, username, password) =>
+          User(userId, username, password)
       })
 
   override def fetchAll: F[Vector[User]] =
     sql"""SELECT uuid, name, password, deleted FROM users WHERE deleted = false"""
-      .query[(UserId, Username, HashedPassword, Deleted)]
+      .query[(UserId, Username, HashedPassword)]
       .to[Vector]
       .transact(tx)
       .flatTap(_ => Logger[F].info("fetching all users"))
       .map(_.map {
-        case (userId, username, password, deleted) =>
-          User(userId, username, password, deleted)
+        case (userId, username, password) =>
+          User(userId, username, password)
       })
 
   override def create(create: UserCreate): F[Unit] =
