@@ -1,0 +1,5 @@
+package fetching
+
+object Posts {
+
+}
