@@ -1,6 +1,7 @@
 package blog.programs
 
-import blog.config.types.AppConfig
+import blog.auth.{AuthCommands, TokenManager}
+import blog.config.AppConfig
 import blog.impl._
 import blog.middlewares.commonAuthMiddleware
 import blog.resources.{HttpServer, StorageResources}
@@ -27,17 +28,20 @@ object HttpProgram {
       .make[F](appConfig.postgresConfig, appConfig.redisConfig)
       .evalMap(res => {
         val routes = for {
+          // storages works without config
           us <- UserStorage.resource(res.transactor)
           cs <- CommentStorage.resource(res.transactor)
           ts <- TagStorage.resource(res.transactor)
-          ps <- PostStorage.resource(res.transactor, appConfig.paginationOptions)
+          ps <- PostStorage.resource(res.transactor, appConfig.paginationOptions.perPage)
+          // programs works with config
           tm <- TokenManager.resource(appConfig.tokenExpiration, appConfig.jwtAccessTokenKey)
-          ac = AuthCommands.make(res.redis, us, tm, appConfig.tokenExpiration)
-          middleware = commonAuthMiddleware(res.redis, appConfig.jwtSecretKey)
-        } yield getAll[F](ac, us, cs, ts, ps, middleware)
+          ac <- AuthCache.resource(res.redis)
+          authCommands = AuthCommands.make(ac, us, tm, appConfig.tokenExpiration)
+          middleware = commonAuthMiddleware(ac, appConfig.jwtSecretKey)
+        } yield getAll[F](ac, us, cs, ts, ps, middleware, authCommands)
 
         routes
-          .use[Nothing](r => HttpServer[F].newEmber(r.orNotFound, appConfig.http4sServerConfig).useForever)
+          .use[Nothing](r => HttpServer[F].newEmber(r.orNotFound, appConfig.httpServerConfig).useForever)
       })
       .useForever
   }

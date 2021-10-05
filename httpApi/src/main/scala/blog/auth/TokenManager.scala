@@ -1,30 +1,27 @@
-package blog.impl
+package blog.auth
 
-import blog.config.types.{JwtAccessTokenKey, TokenExpiration}
-import blog.domain
-import blog.domain._
-import blog.storage._
+import blog.config
+import blog.config.{JwtAccessTokenKey, TokenExpiration}
 import cats._
 import cats.effect.{Resource, Sync}
+import cats.implicits._
 import dev.profunktor.auth.jwt._
+import eu.timepit.refined.auto._
+import io.circe.syntax._
 import org.typelevel.log4cats.Logger
 import pdi.jwt._
-import cats.implicits._
-import io.circe.syntax._
-import eu.timepit.refined.auto._
 
 import java.time.Clock
 import java.util.UUID
-import scala.concurrent.duration.FiniteDuration
 
 case class TokenManager[F[_]: Monad: Sync: Logger](
     tokenExpiration: TokenExpiration,
     jwtAccessTokenKeyConfig: JwtAccessTokenKey
-) extends TokenManagerDsl[F] {
+) {
 
   private implicit val clock: F[Clock] = Sync[F].delay(Clock.systemUTC())
 
-  override def create: F[JwtToken] =
+  def create: F[JwtToken] =
     for {
       uuid <- UUID.randomUUID().pure[F]
       clock <- Sync[F].delay(Clock.systemUTC())
@@ -42,6 +39,6 @@ object TokenManager {
   def resource[F[_]: Logger: Monad: Sync](
       tokenExpiration: TokenExpiration,
       jwtAccessTokenKeyConfig: JwtAccessTokenKey
-  ): Resource[F, TokenManagerDsl[F]] =
+  ): Resource[F, TokenManager[F]] =
     Resource.pure(TokenManager[F](tokenExpiration, jwtAccessTokenKeyConfig))
 }

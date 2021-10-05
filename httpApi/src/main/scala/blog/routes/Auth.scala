@@ -1,10 +1,10 @@
 package blog.routes
 
+import blog.auth.AuthCommands
 import blog.domain._
 import blog.domain.users.User
 import blog.errors._
 import blog.domain.requests._
-import blog.storage.AuthCommandsDsl
 import blog.utils.PassHasher
 import blog.utils.ext.refined._
 import cats.MonadThrow
@@ -18,7 +18,7 @@ import org.http4s.server.{AuthMiddleware, Router}
 import java.util.UUID
 
 final case class Auth[F[_]: JsonDecoder: MonadThrow](
-    authCommands: AuthCommandsDsl[F]
+    authCommands: AuthCommands[F]
 ) extends Http4sDsl[F] {
 
   private val httpRoutes: HttpRoutes[F] = HttpRoutes.of[F] {

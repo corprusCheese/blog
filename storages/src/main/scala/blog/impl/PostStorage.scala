@@ -1,6 +1,5 @@
 package blog.impl
 
-import blog.config.types.PaginationOptions
 import blog.domain._
 import blog.domain.posts._
 import blog.meta._
@@ -8,21 +7,18 @@ import blog.storage.PostStorageDsl
 import cats.data.NonEmptyVector
 import cats.effect.{MonadCancelThrow, Resource}
 import cats.implicits._
-import doobie.{Fragments, Update}
 import doobie.implicits._
 import doobie.refined._
 import doobie.refined.implicits._
-import doobie.util.transactor
 import doobie.util.transactor.Transactor
+import doobie.{Fragments, Update}
 import eu.timepit.refined.auto._
 import org.typelevel.log4cats.Logger
 
 case class PostStorage[F[_]: Logger: MonadCancelThrow](
     tx: Transactor[F],
-    paginationOptions: PaginationOptions
+    perPage: PerPage
 ) extends PostStorageDsl[F] {
-
-  private val perPage: PerPage = paginationOptions.perPage
 
   override def findById(id: PostId): F[Option[Post]] =
     sql"""SELECT uuid, posts.message, user_id, deleted FROM posts WHERE uuid = ${id} AND deleted = false"""
@@ -125,8 +121,8 @@ case class PostStorage[F[_]: Logger: MonadCancelThrow](
 
 object PostStorage {
   def resource[F[_]: Logger: MonadCancelThrow](
-      tx: transactor.Transactor[F],
-      paginationOptions: PaginationOptions
+      tx: Transactor[F],
+      commonPerPage: PerPage
   ): Resource[F, PostStorageDsl[F]] =
-    Resource.pure[F, PostStorage[F]](PostStorage[F](tx, paginationOptions))
+    Resource.pure[F, PostStorage[F]](PostStorage[F](tx, commonPerPage))
 }

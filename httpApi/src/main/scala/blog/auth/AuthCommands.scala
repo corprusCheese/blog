@@ -1,25 +1,33 @@
-package blog.impl
+package blog.auth
 
-import blog.config.types.TokenExpiration
+import blog.config.TokenExpiration
 import blog.domain._
 import blog.domain.users.{User, UserCreate}
 import blog.storage._
 import cats._
 import cats.implicits._
 import dev.profunktor.auth.jwt.JwtToken
-import dev.profunktor.redis4cats.RedisCommands
 import eu.timepit.refined.cats._
-import io.circe.syntax.EncoderOps
+
+trait AuthCommands[F[_]] {
+  def newUser(
+      userId: UserId,
+      username: Username,
+      password: HashedPassword
+  ): F[Option[JwtToken]]
+  def login(username: Username, password: HashedPassword): F[Option[JwtToken]]
+  def logout(token: JwtToken, username: UserId): F[Unit]
+}
 
 object AuthCommands {
 
   def make[F[_]: Monad](
-      redis: RedisCommands[F, String, String],
+      cache: AuthCacheDsl[F],
       userStorage: UserStorageDsl[F],
-      tokenManager: TokenManagerDsl[F],
+      tokenManager: TokenManager[F],
       tokenExpiration: TokenExpiration
-  ): AuthCommandsDsl[F] =
-    new AuthCommandsDsl[F] {
+  ): AuthCommands[F] =
+    new AuthCommands[F] {
       override def newUser(
           userId: UserId,
           username: Username,
@@ -31,10 +39,9 @@ object AuthCommands {
             for {
               _ <- userStorage.create(UserCreate(userId, username, password))
               token <- tokenManager.create
-              _ <- redis.setEx(userId.show, token.value, tokenExpiration.timeout)
-              _ <- redis.setEx(
-                token.value,
-                User(userId, username, password).asJson.toString,
+              _ <- cache.setToken(
+                User(userId, username, password),
+                token,
                 tokenExpiration.timeout
               )
 
@@ -48,18 +55,17 @@ object AuthCommands {
         userStorage.findByName(username).flatMap {
           case Some(user) if password == user.password =>
             for {
-              redisToken <- redis.get(user.uuid.show)
+              redisToken <- cache.getTokenAsString(user.uuid)
               token <- redisToken match {
                 case None =>
                   for {
-                    t <- tokenManager.create
-                    _ <- redis.setEx(user.uuid.show, t.value, tokenExpiration.timeout)
-                    _ <- redis.setEx(
-                      t.value,
-                      User(user.uuid, username, password).asJson.toString,
+                    token <- tokenManager.create
+                    _ <- cache.setToken(
+                      User(user.uuid, username, password),
+                      token,
                       tokenExpiration.timeout
                     )
-                  } yield t
+                  } yield token
                 case Some(token) => JwtToken(token).pure[F]
               }
             } yield token.some
@@ -70,6 +76,6 @@ object AuthCommands {
           token: JwtToken,
           userId: UserId
       ): F[Unit] =
-        redis.del(userId.show).map(_ => ())
+        cache.delToken(userId, token)
     }
 }

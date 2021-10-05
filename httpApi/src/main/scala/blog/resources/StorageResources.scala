@@ -1,6 +1,6 @@
 package blog.resources
 
-import blog.config.types.{AppConfig, PostgresConfig, RedisConfig}
+import blog.config.{PostgresConfig, RedisConfig}
 import cats._
 import cats.effect._
 import cats.implicits.catsSyntaxTuple3Parallel

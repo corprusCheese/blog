@@ -16,14 +16,13 @@ import org.typelevel.log4cats.SelfAwareStructuredLogger
 import org.typelevel.log4cats.noop.NoOpLogger
 import utils.generators._
 import utils.postgres._
-import utils.configHandler._
 import weaver.IOSuite
 import weaver.scalacheck.Checkers
 
 object PostgresTest extends IOSuite with Checkers {
   implicit val logger: SelfAwareStructuredLogger[IO] = NoOpLogger[IO]
 
-  // for pagination tests
+  val perPage: PerPage = 1000
   val pageOk: Page = 0
   val pageFalse: Page = 110
 
@@ -33,20 +32,18 @@ object PostgresTest extends IOSuite with Checkers {
     res.flatTap(x => Resource.make(IO.unit)(_ => f(x)))
 
   override def sharedResource: Resource[IO, Res] =
-    Resource.make(
-      testConfig
-        .use(config => {
-          Transactor
-            .fromDriverManager[IO](
-              config.postgresConfig.commonDriver,
-              config.postgresConfig.postgresUri,
-              config.postgresConfig.user,
-              config.postgresConfig.password
-            )
-            .pure[IO]
-        })
-        .flatTap(tx => deleteAll(tx))
-    )(_ => IO.unit)
+    afterAll(
+      Resource
+        .pure[IO, Aux[IO, Unit]](
+          Transactor.fromDriverManager[IO](
+            "org.postgresql.Driver",
+            "jdbc:postgresql://0.0.0.0:5433/blog",
+            "admin",
+            "password"
+          )
+        ),
+      tx => deleteAll(tx)
+    )
 
   test("users") { postgres =>
     forall(userGen) { user =>
@@ -81,9 +78,8 @@ object PostgresTest extends IOSuite with Checkers {
 
     forall(gen) {
       case (user, post) =>
-        testConfig.use(config => {
           val postStorage =
-            PostStorage.resource[IO](postgres, config.paginationOptions)
+            PostStorage.resource[IO](postgres, perPage)
           val userStorage = UserStorage.resource[IO](postgres)
 
           postStorage.use(ps =>
@@ -114,7 +110,6 @@ object PostgresTest extends IOSuite with Checkers {
               )
             )
           )
-        })
     }
   }
 
@@ -128,10 +123,8 @@ object PostgresTest extends IOSuite with Checkers {
 
       forall(gen) {
         case (user, post, tag) =>
-          testConfig.use(config => {
-
             val postStorage =
-              PostStorage.resource[IO](postgres, config.paginationOptions)
+              PostStorage.resource[IO](postgres, perPage)
             val userStorage = UserStorage.resource[IO](postgres)
             val tagStorage = TagStorage.resource[IO](postgres)
 
@@ -172,7 +165,6 @@ object PostgresTest extends IOSuite with Checkers {
                 )
               )
             )
-          })
       }
     }
   }
@@ -187,10 +179,8 @@ object PostgresTest extends IOSuite with Checkers {
 
       forall(gen) {
         case (user, post, comment) =>
-          testConfig.use(config => {
-
             val postStorage =
-              PostStorage.resource[IO](postgres, config.paginationOptions)
+              PostStorage.resource[IO](postgres, perPage)
             val userStorage = UserStorage.resource[IO](postgres)
             val commentStorage = CommentStorage.resource[IO](postgres)
 
@@ -229,7 +219,6 @@ object PostgresTest extends IOSuite with Checkers {
                 )
               )
             )
-          })
       }
     }
   }

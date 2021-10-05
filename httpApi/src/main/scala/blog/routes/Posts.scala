@@ -120,8 +120,8 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
           getPage(req)
         )
         .flatMap {
-          case v if v.isEmpty  => NotFound("no post with this tag")
           case v if v.nonEmpty => Ok(v)
+          case _  => NotFound("no post with this tag")
         }
 
     // it is POST query because url is limited

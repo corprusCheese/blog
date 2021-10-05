@@ -13,8 +13,6 @@ lazy val core = (project in file("core"))
       "tf.tofu" %% "derevo-core" % "0.12.6",
       "tf.tofu" %% "derevo-cats" % "0.12.6",
       "tf.tofu" %% "derevo-circe-magnolia" % "0.12.6",
-      "dev.optics" %% "monocle-core" % "3.0.0",
-      "dev.optics" %% "monocle-macro" % "3.0.0",
       "io.estatico" %% "newtype" % "0.4.4",
       "eu.timepit" %% "refined" % "0.9.15",
       "eu.timepit" %% "refined-cats" % "0.9.15",
@@ -44,7 +42,7 @@ lazy val storages = (project in file("storages"))
       "dev.profunktor" %% "redis4cats-effects" % "1.0.0",
       "dev.profunktor" %% "redis4cats-log4cats" % "1.0.0",
       "dev.profunktor" %% "http4s-jwt-auth" % "1.0.0"
-)
+    )
   )
   .dependsOn(core)
 
@@ -59,14 +57,14 @@ lazy val http = (project in file("httpApi"))
       "org.http4s" %% "http4s-circe" % "0.23.1",
       "org.typelevel" %% "cats-core" % "2.6.1",
       "org.typelevel" %% "cats-effect" % "3.2.8",
-      "com.github.cb372" %% "cats-retry" % "3.1.0",
       "com.disneystreaming" %% "weaver-cats" % "0.7.6" % Test,
       "com.disneystreaming" %% "weaver-scalacheck" % "0.7.6" % Test,
       "co.fs2" %% "fs2-core" % "3.1.2",
       "org.typelevel" %% "log4cats-slf4j" % "2.1.1",
       "org.typelevel" %% "log4cats-noop" % "2.1.1",
       "ch.qos.logback" % "logback-classic" % "1.2.6",
-      "dev.profunktor" %% "http4s-jwt-auth" % "1.0.0"
+      "dev.profunktor" %% "http4s-jwt-auth" % "1.0.0",
+      "com.github.pureconfig" %% "pureconfig" % "0.17.0"
     )
   )
   .dependsOn(core, storages)

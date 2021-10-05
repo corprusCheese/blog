@@ -5,7 +5,7 @@ import blog.domain.posts._
 import blog.domain.users._
 import blog.domain.tags._
 import blog.domain.comments._
-
+import dev.profunktor.auth.jwt.JwtToken
 import eu.timepit.refined.types.string.NonEmptyString
 import org.scalacheck.Gen
 
@@ -70,5 +70,7 @@ object generators {
       name <- commentMessageGen
       userId <- userIdGen
     } yield Comment(uuid, name, userId, CommentMaterializedPath(""))
+
+  val tokenAsStringGen: Gen[String] = nesGen(s => s)
 
 }
