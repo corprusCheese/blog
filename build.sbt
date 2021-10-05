@@ -21,6 +21,20 @@ lazy val core = (project in file("core"))
     )
   )
 
+lazy val coreTests = (project in file("core-tests"))
+  .settings(
+    name := "core-tests",
+    scalaVersion := "2.13.6",
+    scalacOptions ++= Seq("-Ymacro-annotations"),
+    libraryDependencies ++= Seq(
+      "com.disneystreaming" %% "weaver-cats" % "0.7.6",
+      "com.disneystreaming" %% "weaver-scalacheck" % "0.7.6",
+      "eu.timepit" %% "refined" % "0.9.15",
+      "eu.timepit" %% "refined-cats" % "0.9.15",
+      "io.circe" %% "circe-refined" % "0.14.1",
+    )
+  ).dependsOn(core)
+
 lazy val storages = (project in file("storages"))
   .settings(
     name := "storages",
@@ -44,7 +58,7 @@ lazy val storages = (project in file("storages"))
       "dev.profunktor" %% "http4s-jwt-auth" % "1.0.0"
     )
   )
-  .dependsOn(core)
+  .dependsOn(core, coreTests % Test)
 
 lazy val http = (project in file("httpApi"))
   .settings(
@@ -67,4 +81,4 @@ lazy val http = (project in file("httpApi"))
       "com.github.pureconfig" %% "pureconfig" % "0.17.0"
     )
   )
-  .dependsOn(core, storages)
+  .dependsOn(core, storages, coreTests % Test)

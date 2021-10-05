@@ -1,4 +1,4 @@
-package utils
+package unit.utils
 
 import blog.domain.Password
 import blog.utils.PassHasher

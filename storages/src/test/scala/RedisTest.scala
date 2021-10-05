@@ -7,11 +7,11 @@ import dev.profunktor.redis4cats.effect.Log.NoOp.instance
 import dev.profunktor.redis4cats.{Redis, RedisCommands}
 import eu.timepit.refined.auto._
 import eu.timepit.refined.cats._
+import gen.generators._
 import io.circe.syntax.EncoderOps
 import org.scalacheck.Gen
 import org.typelevel.log4cats.SelfAwareStructuredLogger
 import org.typelevel.log4cats.noop.NoOpLogger
-import utils.generators._
 import weaver.IOSuite
 import weaver.scalacheck.Checkers
 
@@ -25,9 +25,9 @@ object RedisTest extends IOSuite with Checkers {
   type Res = RedisCommands[IO, String, String]
 
   override def sharedResource: Resource[IO, Res] =
-      Redis[IO]
-        .utf8("redis://0.0.0.0:6380")
-        .evalTap(_.flushAll)
+    Redis[IO]
+      .utf8("redis://0.0.0.0:6380")
+      .evalTap(_.flushAll)
 
   test("authentication") { redis =>
     {
@@ -40,21 +40,23 @@ object RedisTest extends IOSuite with Checkers {
       forall(gen) {
         case (user1, user2, tokenString) =>
           val token = JwtToken(tokenString)
-          AuthCache.resource(redis).use(cache =>
-            for {
-              _ <- cache.setToken(user1, token, timeout)
-              x <- cache.getTokenAsString(user1.uuid)
-              y <- cache.getTokenAsString(user2.uuid)
-              z <- cache.getUserAsString(token)
-              _ <- cache.delToken(user1.uuid, token)
-              o <- cache.getTokenAsString(user1.uuid)
-            } yield expect.all(
-              x.nonEmpty && x == token.value.some,
-              y.isEmpty,
-              z.nonEmpty && z == user1.asJson.toString.some,
-              o.isEmpty
+          AuthCache
+            .resource(redis)
+            .use(cache =>
+              for {
+                _ <- cache.setToken(user1, token, timeout)
+                x <- cache.getTokenAsString(user1.uuid)
+                y <- cache.getTokenAsString(user2.uuid)
+                z <- cache.getUserAsString(token)
+                _ <- cache.delToken(user1.uuid, token)
+                o <- cache.getTokenAsString(user1.uuid)
+              } yield expect.all(
+                x.nonEmpty && x == token.value.some,
+                y.isEmpty,
+                z.nonEmpty && z == user1.asJson.toString.some,
+                o.isEmpty
+              )
             )
-          )
 
       }
     }

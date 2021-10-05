@@ -1,11 +1,10 @@
-package utils
+package gen
 
+import blog.domain.comments.Comment
+import blog.domain.posts.Post
+import blog.domain.tags.Tag
+import blog.domain.users.User
 import blog.domain._
-import blog.domain.posts._
-import blog.domain.users._
-import blog.domain.tags._
-import blog.domain.comments._
-import dev.profunktor.auth.jwt.JwtToken
 import eu.timepit.refined.types.string.NonEmptyString
 import org.scalacheck.Gen
 

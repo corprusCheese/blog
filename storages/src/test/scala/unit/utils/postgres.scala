@@ -1,4 +1,4 @@
-package utils
+package unit.utils
 
 import cats.effect.{IO, MonadCancelThrow}
 import doobie.util.fragment.Fragment

@@ -1,5 +1,0 @@
-package fetching
-
-object Posts {
-
-}
