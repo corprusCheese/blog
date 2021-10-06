@@ -4,7 +4,7 @@ import blog.domain._
 import blog.domain.users._
 import blog.storage.UserStorageDsl
 import cats.Monad
-import cats.effect.{IO, MonadCancelThrow, Ref, Resource}
+import cats.effect.{Ref, Resource}
 import cats.implicits._
 
 case class TestUserStorage[F[_]: Monad](inMemoryVector: Ref[F, Vector[User]])
@@ -21,21 +21,28 @@ case class TestUserStorage[F[_]: Monad](inMemoryVector: Ref[F, Vector[User]])
   override def delete(delete: UserDelete): F[Unit] =
     for {
       get <- inMemoryVector.get
-      newVector = get.filter(_.uuid!=delete.userId)
+      newVector = get.filter(_.uuid != delete.userId)
       _ <- inMemoryVector.set(newVector)
     } yield ()
 
-  override def create(create: UserCreate): F[Unit] = {
-    val newUser =  User(create.userId, create.username, create.password)
+  override def create(create: UserCreate): F[Unit] =
     for {
       get <- inMemoryVector.get
-      newVector = get :+ newUser
+      newVector = get :+ User(create.userId, create.username, create.password)
       _ <- inMemoryVector.set(newVector)
     } yield ()
-  }
 
   override def update(update: UserUpdate): F[Unit] =
-    Monad[F].unit
+    for {
+      get <- inMemoryVector.get
+      newVector = get.map(user =>
+        if (user.uuid == update.userId)
+          User(update.userId, update.username, update.password)
+        else user
+      )
+      _ <- inMemoryVector.set(newVector)
+    } yield ()
+
 }
 
 object TestUserStorage {

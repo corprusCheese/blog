@@ -11,6 +11,7 @@ import eu.timepit.refined.auto._
 import impl.helper.PostTagsStorage
 
 case class TestPostStorage[F[_]: Monad](
+    postTagsStorage: PostTagsStorage[F],
     inMemoryVector: Ref[F, Vector[Post]]
 ) extends PostStorageDsl[F] {
 
@@ -30,7 +31,7 @@ case class TestPostStorage[F[_]: Monad](
       page: Page
   ): F[Vector[Post]] = {
     val vecIds = tagIds.toVector
-      .map(tagId => PostTagsStorage.findByTagId[F](tagId))
+      .map(tagId => postTagsStorage.findByTagId(tagId))
       .sequence
       .map(_.flatten)
 
@@ -45,29 +46,46 @@ case class TestPostStorage[F[_]: Monad](
   override def delete(delete: DeletePost): F[Unit] =
     for {
       get <- inMemoryVector.get
-      newVector = get.filter(_.postId!=delete.postId)
+      newVector = get.filter(_.postId != delete.postId)
       _ <- inMemoryVector.set(newVector)
-      tags <- PostTagsStorage
-      .findByPostId[F](delete.postId)
-      _ <- tags.map(PostTagsStorage.deleteTagId[F]).sequence
+      tags <-
+        postTagsStorage
+          .findByPostId(delete.postId)
+      _ <- tags.map(postTagsStorage.deleteTagId).sequence
     } yield ()
 
-  override def create(create: CreatePost): F[Unit] = {
-    val newPost =  Post(create.postId, create.message, create.userId)
+  override def create(create: CreatePost): F[Unit] =
     for {
       get <- inMemoryVector.get
-      newVector = get :+ newPost
+      newVector = get :+ Post(create.postId, create.message, create.userId)
       _ <- inMemoryVector.set(newVector)
-      _ <- create.tagsId.map(tagId => PostTagsStorage.create[F](create.postId, tagId)).sequence
+      _ <- postTagsStorage.create(create.postId, create.tagsId)
     } yield ()
-  }
 
-  override def update(update: UpdatePost): F[Unit] = Monad[F].unit
+  override def update(update: UpdatePost): F[Unit] =
+    for {
+      get <- inMemoryVector.get
+      newVector = get.map(post =>
+        if (post.postId == update.postId)
+          Post(update.postId, update.message, post.userId)
+        else post
+      )
+      _ <- inMemoryVector.set(newVector)
+      _ <- postTagsStorage.deletePostId(update.postId)
+      _ <- postTagsStorage.create(update.postId, update.tagsId)
+    } yield ()
 }
 
 object TestPostStorage {
   def resource[F[_]: Monad: Ref.Make]: Resource[F, PostStorageDsl[F]] =
-    Resource.eval(
-      Ref.of[F, Vector[Post]](Vector.empty).map(TestPostStorage[F])
-    )
+    for {
+      postTagStorage <- PostTagsStorage.resource[F]
+      ref <- Resource.eval(
+        Ref
+          .of[F, Vector[Post]](Vector.empty)
+          .map(inMemoryVector =>
+            TestPostStorage[F](postTagStorage, inMemoryVector)
+          )
+      )
+    } yield ref
 }

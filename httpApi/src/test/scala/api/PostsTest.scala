@@ -4,27 +4,19 @@ import api.suites.HttpSuite
 import blog.domain.posts.{CreatePost, Post}
 import blog.domain.users.{User, UserCreate}
 import blog.routes.Posts
-import blog.storage.{
-  CommentStorageDsl,
-  PostStorageDsl,
-  TagStorageDsl,
-  UserStorageDsl
-}
+import blog.storage.{CommentStorageDsl, PostStorageDsl, TagStorageDsl, UserStorageDsl}
 import cats.effect.{IO, Resource}
-import cats.implicits.catsSyntaxApplicativeId
 import gen.generators._
 import impl.{TestPostStorage, TestUserStorage}
-import io.circe.syntax.EncoderOps
 import org.http4s.Method._
 import org.http4s.Status.Ok
 import org.http4s.client.dsl.io._
-import org.http4s.syntax.literals._
 import org.http4s.server.AuthMiddleware
-import weaver.SimpleIOSuite
-import weaver.scalacheck.Checkers
+import org.http4s.syntax.literals._
 
 object PostsTest extends HttpSuite {
 
+  /*
   test("posts with pagination") {
     val gen = for {
       u <- userGen
@@ -71,5 +63,6 @@ object PostsTest extends HttpSuite {
         )
     }
   }
+   */
 
 }
