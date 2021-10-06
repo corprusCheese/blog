@@ -1,4 +1,4 @@
-package impl.helper
+package impl.bound
 
 import blog.domain._
 import cats.Monad

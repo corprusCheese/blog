@@ -8,14 +8,14 @@ import cats.data.NonEmptyVector
 import cats.effect.{Ref, Resource}
 import cats.implicits._
 import eu.timepit.refined.auto._
-import impl.helper.PostTagsStorage
+import impl.bound.PostTagsStorage
 
 case class TestPostStorage[F[_]: Monad](
     postTagsStorage: PostTagsStorage[F],
     inMemoryVector: Ref[F, Vector[Post]]
 ) extends PostStorageDsl[F] {
 
-  private val perPage: PerPage = 10
+  private val perPage: PerPage = 3
 
   override def findById(id: PostId): F[Option[Post]] =
     inMemoryVector.get.map(_.find(_.postId == id))

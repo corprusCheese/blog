@@ -7,7 +7,7 @@ import cats.Monad
 import cats.effect.{Ref, Resource}
 import cats.implicits._
 import eu.timepit.refined.auto._
-import impl.helper.PostTagsStorage
+import impl.bound.PostTagsStorage
 
 case class TestTagStorage[F[_]: Monad](
     postTagsStorage: PostTagsStorage[F],

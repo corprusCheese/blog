@@ -137,7 +137,6 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
             case _               => NotFound("no post with such tags")
           }
       }
-
   }
 
   private def postBelongsToUser(
@@ -156,5 +155,10 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
   def routes(authMiddleware: AuthMiddleware[F, User]): HttpRoutes[F] =
     Router(
       "/post" -> (httpRoutes <+> authMiddleware(httpRoutesAuth))
+    )
+
+  def routesWithoutAuthOnly: HttpRoutes[F] =
+    Router(
+      "/post" -> httpRoutes
     )
 }
