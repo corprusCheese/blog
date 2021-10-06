@@ -1,5 +1,7 @@
 package api
 
-object TagsTest {
+import api.suites.TestCommon
+
+object TagsTest extends TestCommon{
 
 }

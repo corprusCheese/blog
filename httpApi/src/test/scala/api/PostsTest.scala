@@ -1,16 +1,15 @@
 package api
 
-import api.suites.HttpSuite
+import api.suites.TestCommon
 import blog.domain._
 import blog.domain.users.UserCreate
 import blog.routes.Posts
 import blog.storage._
-import cats.effect.{IO, Resource}
+import cats.effect.IO
 import cats.implicits.catsSyntaxApplicativeId
 import eu.timepit.refined.auto._
 import eu.timepit.refined.cats._
 import ext.routes.helper._
-import impl._
 import org.http4s.Method.GET
 import org.http4s.Status.{NotFound, Ok}
 import org.http4s.Uri
@@ -20,22 +19,7 @@ import weaver.Expectations
 
 import java.util.UUID
 
-object PostsTest extends HttpSuite {
-
-  override type Res = (
-      UserStorageDsl[IO],
-      PostStorageDsl[IO],
-      CommentStorageDsl[F],
-      TagStorageDsl[F]
-  )
-
-  override def sharedResource: Resource[IO, Res] =
-    for {
-      us <- TestUserStorage.resource[IO]
-      ps <- TestPostStorage.resource[IO]
-      cs <- TestCommentStorage.resource[IO]
-      ts <- TestTagStorage.resource[IO]
-    } yield (us, ps, cs, ts)
+object PostsTest extends TestCommon {
 
   def testPagination(
       ps: PostStorageDsl[IO],

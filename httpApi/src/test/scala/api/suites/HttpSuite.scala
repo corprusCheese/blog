@@ -1,13 +1,11 @@
 package api.suites
-import scala.util.control.NoStackTrace
 import cats.effect.IO
-import cats.implicits._
 import io.circe._
 import io.circe.syntax._
 import org.http4s._
 import org.http4s.circe._
-import weaver.scalacheck.Checkers
 import weaver._
+import weaver.scalacheck.Checkers
 
 trait HttpSuite extends IOSuite with Checkers {
 
@@ -47,5 +45,4 @@ trait HttpSuite extends IOSuite with Checkers {
       case Left(_)  => success
       case Right(_) => failure("expected a failure")
     }
-
 }
