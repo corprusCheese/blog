@@ -14,10 +14,10 @@ case class TestAuthCache[F[_]: Monad](
     inMemoryVector: Ref[F, Vector[(String, String)]]
 ) extends AuthCacheDsl[F] {
   override def getTokenAsString(userId: UserId): F[Option[String]] =
-    inMemoryVector.get.map(_.find(_._1 == userId.show))
+    inMemoryVector.get.map(_.find(_._1 == userId.show).map(_._2))
 
   override def getUserAsString(token: JwtToken): F[Option[String]] =
-    inMemoryVector.get.map(_.find(_._2 == token.value))
+    inMemoryVector.get.map(_.find(_._2 == token.value).map(_._1))
 
   override def setToken(
       user: users.User,

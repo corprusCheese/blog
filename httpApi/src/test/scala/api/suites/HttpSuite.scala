@@ -1,6 +1,7 @@
 package api.suites
 
 import cats.effect.IO
+import cats.implicits.catsSyntaxApplicativeId
 import io.circe._
 import io.circe.syntax._
 import org.http4s._
@@ -29,7 +30,9 @@ trait HttpSuite extends SimpleIOSuite with Checkers {
       expectedStatus: Status
   ): IO[Boolean] =
     routes.run(req).value.flatMap {
-      case Some(resp) => IO.pure(resp.status == expectedStatus)
+      case Some(resp) =>
+        IO.pure(resp.status == expectedStatus)
+          .flatTap(res => if (!res) println(resp.status).pure[IO] else IO.unit)
       case None =>
         IO.pure(println(s"${req.uri} route not found")).as(false)
     }

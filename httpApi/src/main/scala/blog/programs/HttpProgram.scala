@@ -8,6 +8,7 @@ import blog.resources.{HttpServer, StorageResources}
 import blog.routes.getAll
 import cats._
 import cats.effect._
+import cats.implicits._
 import dev.profunktor.redis4cats.log4cats.log4CatsInstance
 import org.http4s.implicits._
 import org.typelevel.log4cats.SelfAwareStructuredLogger
