@@ -1,4 +1,5 @@
 package api.suites
+
 import cats.effect.IO
 import io.circe._
 import io.circe.syntax._
@@ -34,7 +35,7 @@ trait HttpSuite extends IOSuite with Checkers {
   ): IO[Expectations] =
     routes.run(req).value.map {
       case Some(resp) => expect.same(resp.status, expectedStatus)
-      case None       => failure("route not found")
+      case None       => failure(s"${req.uri} route not found")
     }
 
   def expectHttpFailure(

@@ -30,7 +30,7 @@ case class AuthCache[F[_]: Monad](
       timeout: FiniteDuration
   ): F[Unit] =
     for {
-      _ <- redis.setEx(prefixUserId(user.uuid), token.value, timeout)
+      _ <- redis.setEx(prefixUserId(user.userId), token.value, timeout)
       _ <- redis.setEx(prefixToken(token), user.asJson.toString, timeout)
     } yield ()
 

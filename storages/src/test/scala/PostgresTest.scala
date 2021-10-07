@@ -51,12 +51,12 @@ object PostgresTest extends IOSuite with Checkers {
 
         userStorage.use(us =>
           for {
-            _ <- us.create(UserCreate(user.uuid, user.username, user.password))
-            o <- us.findById(user.uuid)
+            _ <- us.create(UserCreate(user.userId, user.username, user.password))
+            o <- us.findById(user.userId)
             y <- us.fetchAll
-            _ <- us.update(UserUpdate(user.uuid, user.username, user.password))
-            z <- us.findById(user.uuid)
-            _ <- us.delete(UserDelete(user.uuid))
+            _ <- us.update(UserUpdate(user.userId, user.username, user.password))
+            z <- us.findById(user.userId)
+            _ <- us.delete(UserDelete(user.userId))
             q <- us.findByName(user.username)
           } yield expect.all(
             o.nonEmpty,

@@ -45,11 +45,11 @@ object RedisTest extends IOSuite with Checkers {
             .use(cache =>
               for {
                 _ <- cache.setToken(user1, token, timeout)
-                x <- cache.getTokenAsString(user1.uuid)
-                y <- cache.getTokenAsString(user2.uuid)
+                x <- cache.getTokenAsString(user1.userId)
+                y <- cache.getTokenAsString(user2.userId)
                 z <- cache.getUserAsString(token)
-                _ <- cache.delToken(user1.uuid, token)
-                o <- cache.getTokenAsString(user1.uuid)
+                _ <- cache.delToken(user1.userId, token)
+                o <- cache.getTokenAsString(user1.userId)
               } yield expect.all(
                 x.nonEmpty && x == token.value.some,
                 y.isEmpty,

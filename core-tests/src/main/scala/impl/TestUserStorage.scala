@@ -11,7 +11,7 @@ case class TestUserStorage[F[_]: Monad](inMemoryVector: Ref[F, Vector[User]])
     extends UserStorageDsl[F] {
 
   override def findById(id: UserId): F[Option[User]] =
-    inMemoryVector.get.map(_.find(_.uuid == id))
+    inMemoryVector.get.map(_.find(_.userId == id))
 
   override def findByName(name: Username): F[Option[User]] =
     inMemoryVector.get.map(_.find(_.username == name))
@@ -21,7 +21,7 @@ case class TestUserStorage[F[_]: Monad](inMemoryVector: Ref[F, Vector[User]])
   override def delete(delete: UserDelete): F[Unit] =
     for {
       get <- inMemoryVector.get
-      newVector = get.filter(_.uuid != delete.userId)
+      newVector = get.filter(_.userId != delete.userId)
       _ <- inMemoryVector.set(newVector)
     } yield ()
 
@@ -36,7 +36,7 @@ case class TestUserStorage[F[_]: Monad](inMemoryVector: Ref[F, Vector[User]])
     for {
       get <- inMemoryVector.get
       newVector = get.map(user =>
-        if (user.uuid == update.userId)
+        if (user.userId == update.userId)
           User(update.userId, update.username, update.password)
         else user
       )

@@ -2,6 +2,7 @@ package blog
 
 import blog.auth.AuthCommands
 import blog.domain.users.User
+import blog.programs._
 import blog.storage._
 import cats.MonadThrow
 import cats.implicits._
@@ -11,7 +12,6 @@ import org.http4s.server.AuthMiddleware
 
 package object routes {
   def getAll[F[_]: JsonDecoder: MonadThrow](
-      ac: AuthCacheDsl[F],
       us: UserStorageDsl[F],
       cs: CommentStorageDsl[F],
       ts: TagStorageDsl[F],
@@ -19,10 +19,17 @@ package object routes {
       am: AuthMiddleware[F, User],
       authCommands: AuthCommands[F]
   ): HttpRoutes[F] = {
-    val authRoutes = Auth[F](authCommands).routes(am)
-    val postRoutes = Posts[F](ps, cs, ts).routes(am)
-    val commentRoutes = Comments[F](cs, ps).routes(am)
-    val tagRoutes = Tags[F](ts, ps).routes(am)
+    // programs
+    val authProgram: AuthProgram[F] = AuthProgram.make(authCommands)
+    val postProgram: PostProgram[F] = PostProgram.make(ps, cs, ts)
+    val tagProgram: TagProgram[F] = TagProgram.make(ts, ps)
+    val commentProgram: CommentProgram[F] = CommentProgram.make(cs)
+    // routes
+
+    val authRoutes = Auth[F](authProgram).routes(am)
+    val postRoutes = Posts[F](postProgram).routes(am)
+    val commentRoutes = Comments[F](commentProgram).routes(am)
+    val tagRoutes = Tags[F](tagProgram).routes(am)
 
     authRoutes <+> postRoutes <+> commentRoutes <+> tagRoutes
   }

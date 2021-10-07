@@ -14,6 +14,7 @@ trait PostTagsStorage[F[_]] {
   def deleteTagId(tagId: TagId): F[Unit]
   def findByTagId(tagId: TagId): F[Vector[PostId]]
   def findByPostId(postId: PostId): F[Vector[TagId]]
+  def getAll: F[Vector[(PostId, TagId)]]
 }
 
 object PostTagsStorage {
@@ -58,6 +59,8 @@ object PostTagsStorage {
             postIds
               .map(postId => create(postId, tagId))
               .sequence.map(_ => ())
+
+          override def getAll: F[Vector[(PostId, TagId)]] = inMemoryVector.get
         }
       )
 

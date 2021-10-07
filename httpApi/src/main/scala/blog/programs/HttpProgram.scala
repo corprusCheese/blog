@@ -38,7 +38,7 @@ object HttpProgram {
           ac <- AuthCache.resource(res.redis)
           authCommands = AuthCommands.make(ac, us, tm, appConfig.tokenExpiration)
           middleware = commonAuthMiddleware(ac, appConfig.jwtSecretKey)
-        } yield getAll[F](ac, us, cs, ts, ps, middleware, authCommands)
+        } yield getAll[F](us, cs, ts, ps, middleware, authCommands)
 
         routes
           .use[Nothing](r => HttpServer[F].newEmber(r.orNotFound, appConfig.httpServerConfig).useForever)

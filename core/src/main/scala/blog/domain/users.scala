@@ -8,7 +8,7 @@ object users {
 
   @derive(decoder, encoder, eqv, show)
   case class User(
-      uuid: UserId,
+      userId: UserId,
       username: Username,
       password: HashedPassword
   )

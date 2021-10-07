@@ -1,16 +1,16 @@
 package api.suites
 
-import blog.storage.{CommentStorageDsl, PostStorageDsl, TagStorageDsl, UserStorageDsl}
-import cats.effect.{IO, Resource}
-import impl.{TestCommentStorage, TestPostStorage, TestTagStorage, TestUserStorage}
+import blog.storage._
+import cats.effect._
+import impl._
 
 abstract class TestCommon extends HttpSuite {
   override type Res = (
-    UserStorageDsl[IO],
+      UserStorageDsl[IO],
       PostStorageDsl[IO],
       CommentStorageDsl[IO],
       TagStorageDsl[IO]
-    )
+  )
 
   override def sharedResource: Resource[IO, Res] =
     for {

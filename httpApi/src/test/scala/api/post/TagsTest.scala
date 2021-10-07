@@ -1,4 +1,4 @@
-package api
+package api.post
 
 import api.suites.TestCommon
 

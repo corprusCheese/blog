@@ -55,13 +55,13 @@ object AuthCommands {
         userStorage.findByName(username).flatMap {
           case Some(user) if password == user.password =>
             for {
-              redisToken <- cache.getTokenAsString(user.uuid)
+              redisToken <- cache.getTokenAsString(user.userId)
               token <- redisToken match {
                 case None =>
                   for {
                     token <- tokenManager.create
                     _ <- cache.setToken(
-                      User(user.uuid, username, password),
+                      User(user.userId, username, password),
                       token,
                       tokenExpiration.timeout
                     )

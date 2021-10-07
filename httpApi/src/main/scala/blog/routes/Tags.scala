@@ -5,6 +5,7 @@ import blog.domain.requests._
 import blog.domain.tags._
 import blog.domain.users._
 import blog.errors._
+import blog.programs.TagProgram
 import blog.storage.{PostStorageDsl, TagStorageDsl}
 import blog.utils.ext.refined._
 import cats.MonadThrow
@@ -20,26 +21,21 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.server.{AuthMiddleware, Router}
 
 import java.util.UUID
+import blog.utils.routes.params._
+
 
 final case class Tags[F[_]: JsonDecoder: MonadThrow](
-    tagStorage: TagStorageDsl[F],
-    postStorage: PostStorageDsl[F]
+    tagProgram: TagProgram[F]
 ) extends Http4sDsl[F] {
+
+  private val prefix: String = "/tag"
 
   private val httpRoutesAuth: AuthedRoutes[User, F] = AuthedRoutes.of {
     case ar @ POST -> Root / "create" as _ =>
       ar.req.decodeR[TagCreation] { create =>
-        tagStorage
-          .create(
-            TagCreate(
-              TagId(UUID.randomUUID()),
-              create.name,
-              if (create.postId.isEmpty) Vector.empty[PostId]
-              else Vector[PostId](create.postId.get)
-            )
-          )
-          .flatMap(_ => Created("Tag created"))
+        tagProgram.create(create.name, getVectorFromOptionNev(create.postIds))
           .handleErrorWith(_ => throw CreateTagError)
+          .flatMap(_ => Created("Tag created"))
           .recoverWith {
             case e: CustomError => BadRequest(e.msg)
           }
@@ -47,78 +43,52 @@ final case class Tags[F[_]: JsonDecoder: MonadThrow](
 
     case ar @ POST -> Root / "update" as user =>
       ar.req.decodeR[TagChanging] { update =>
-        canUserUpdateAllRequestedPosts(user.uuid, update.postIds)
-          .flatMap {
-            case false => throw UpdateTagWithNotYoursPosts
-            case true => tagStorage
-              .update(
-                TagUpdate(
-                  update.tagId,
-                  update.name,
-                  update.postIds.get.toVector
-                )
-              )
-              .flatMap(_ => Ok("Tag updated"))
-              .handleErrorWith(_ => throw UpdateTagError)
-              .recoverWith {
-                case e: CustomError => BadRequest(e.msg)
-              }
+        tagProgram.update(update.tagId, update.name, getVectorFromOptionNev(update.postIds), user.userId)
+          .flatMap(_ => Ok("Tag updated"))
+          .recoverWith {
+            case e: CustomError => BadRequest(e.msg)
           }
-
       }
   }
 
-  private def canUserUpdateAllRequestedPosts(
-      userId: UserId,
-      postIds: Option[NonEmptyVector[PostId]]
-  ): F[Boolean] =
-    postIds match {
-      case None => false.pure[F]
-      case Some(requestedPostIds) =>
-        postStorage
-          .getAllUserPosts(userId)
-          .map(_.map(_.postId).intersect(requestedPostIds.toVector))
-          .map {
-            case v if v.isEmpty => false
-            case v              => NonEmptyVector.fromVectorUnsafe(v) == requestedPostIds
-          }
-    }
-
   private val httpRoutes: HttpRoutes[F] = HttpRoutes.of[F] {
     case GET -> Root / "all" =>
-      tagStorage.fetchAll
+      tagProgram.getAll
         .flatMap {
           case v if v.nonEmpty => Ok(v)
           case _               => NotFound("no tags at all")
         }
 
     case GET -> Root / "post" / postId =>
-      tagStorage
-        .getAllPostTags(PostId(UUID.fromString(postId)))
+      tagProgram.getPostTags(PostId(UUID.fromString(postId)))
         .flatMap {
           case v if v.nonEmpty => Ok(v)
           case _               => NotFound("no tags of such post")
         }
 
-    case GET -> Root / tagId =>
-      tagStorage
-        .findById(TagId(UUID.fromString(tagId)))
+    case GET -> Root / "id" / tagId =>
+      tagProgram.findById(TagId(UUID.fromString(tagId)))
         .flatMap {
           case v if v.nonEmpty => Ok(v)
           case _               => NotFound("no tags with such id")
         }
 
-    case GET -> Root / tagName =>
-      tagStorage
-        .findByName(TagName(NonEmptyString.unsafeFrom(tagName)))
+    case GET -> Root / "name" / tagName =>
+      tagProgram.findByName(TagName(NonEmptyString.unsafeFrom(tagName)))
         .flatMap {
           case v if v.nonEmpty => Ok(v)
           case _               => NotFound("no tag with such name")
         }
   }
 
+  // routes
+
+  def routesWithoutAuthOnly: HttpRoutes[F] =
+    Router(prefix -> httpRoutes)
+
+  def routesWithAuthOnly(authMiddleware: AuthMiddleware[F, User]): HttpRoutes[F] =
+    Router(prefix -> authMiddleware(httpRoutesAuth))
+
   def routes(authMiddleware: AuthMiddleware[F, User]): HttpRoutes[F] =
-    Router(
-      "/tag" -> (httpRoutes <+> authMiddleware(httpRoutesAuth))
-    )
+    routesWithoutAuthOnly <+> routesWithAuthOnly(authMiddleware)
 }

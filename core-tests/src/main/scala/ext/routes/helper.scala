@@ -7,6 +7,7 @@ import blog.storage._
 import cats.effect.IO
 import cats.implicits._
 import eu.timepit.refined.auto._
+import gen.generators._
 
 import java.util.UUID
 
@@ -16,29 +17,29 @@ object helper {
       vec: Vector[TagId] = Vector.empty
   ): IO[UUID] =
     for {
-      uuid <- UUID.randomUUID().pure[IO]
+      sample <- postGen.sample.pure[IO]
       _ <- ps.create(
         CreatePost(
-          PostId(uuid),
-          PostMessage("asdsads"),
-          UserId(uuid),
+          sample.get.postId,
+          sample.get.message,
+          sample.get.userId,
           vec
         )
       )
-    } yield uuid
+    } yield sample.get.postId.value
 
   def createTag(
       ts: TagStorageDsl[IO],
       vec: Vector[PostId] = Vector.empty
   ): IO[UUID] =
     for {
-      uuid <- UUID.randomUUID().pure[IO]
+      sample <- tagGen.sample.pure[IO]
       _ <- ts.create(
         TagCreate(
-          TagId(uuid),
-          TagName("asdsads"),
+          sample.get.tagId,
+          sample.get.name,
           vec
         )
       )
-    } yield uuid
+    } yield sample.get.tagId.value
 }
