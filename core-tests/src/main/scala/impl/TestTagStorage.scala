@@ -17,7 +17,6 @@ case class TestTagStorage[F[_]: Monad](
   override def findById(id: TagId): F[Option[Tag]] =
     inMemoryVector.get.map(_.find(_.tagId == id))
 
-
   override def fetchAll: F[Vector[Tag]] =
     inMemoryVector.get
 

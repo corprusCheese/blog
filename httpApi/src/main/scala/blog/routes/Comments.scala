@@ -23,6 +23,8 @@ final case class Comments[F[_]: JsonDecoder: MonadThrow](
     commentProgram: CommentProgram[F]
 ) extends Http4sDsl[F] {
 
+  private val prefix = "/comment"
+
   private val httpRoutesAuth: AuthedRoutes[User, F] = AuthedRoutes.of {
     case ar @ POST -> Root / "create" as user =>
       ar.req.decodeR[CommentCreation] { create =>
@@ -46,7 +48,8 @@ final case class Comments[F[_]: JsonDecoder: MonadThrow](
 
     case ar @ POST -> Root / "delete" as user =>
       ar.req.decodeR[CommentRemoving] { delete =>
-        commentProgram.delete(delete.commentId, user.userId)
+        commentProgram
+          .delete(delete.commentId, user.userId)
           .flatMap(_ => Ok("Comment deleted"))
           .recoverWith {
             case e: CustomError => BadRequest(e.msg)
@@ -86,8 +89,14 @@ final case class Comments[F[_]: JsonDecoder: MonadThrow](
         }
   }
 
+  def routesWithoutAuthOnly: HttpRoutes[F] =
+    Router(prefix -> httpRoutes)
+
+  def routesWithAuthOnly(
+      authMiddleware: AuthMiddleware[F, User]
+  ): HttpRoutes[F] =
+    Router(prefix -> authMiddleware(httpRoutesAuth))
+
   def routes(authMiddleware: AuthMiddleware[F, User]): HttpRoutes[F] =
-    Router(
-      "/comment" -> (httpRoutes <+> authMiddleware(httpRoutesAuth))
-    )
+    routesWithoutAuthOnly <+> routesWithAuthOnly(authMiddleware)
 }

@@ -8,7 +8,7 @@ import org.http4s.circe._
 import weaver._
 import weaver.scalacheck.Checkers
 
-trait HttpSuite extends IOSuite with Checkers {
+trait HttpSuite extends SimpleIOSuite with Checkers {
 
   def expectHttpBodyAndStatus[A: Encoder](
       routes: HttpRoutes[IO],
@@ -16,34 +16,30 @@ trait HttpSuite extends IOSuite with Checkers {
   )(
       expectedBody: A,
       expectedStatus: Status
-  ): IO[Expectations] =
+  ): IO[Boolean] =
     routes.run(req).value.flatMap {
       case Some(resp) =>
         resp.asJson.map { json =>
-          {
-            expect.all(
-              resp.status == expectedStatus,
-              json == expectedBody.asJson
-            )
-          }
+          resp.status == expectedStatus && json == expectedBody.asJson
         }
-      case None => IO.pure(failure(s" ${req.uri} route not found"))
+      case None => IO.pure(println(s" ${req.uri} route not found")).as(false)
     }
 
   def expectHttpStatus(routes: HttpRoutes[IO], req: Request[IO])(
       expectedStatus: Status
-  ): IO[Expectations] =
-    routes.run(req).value.map {
-      case Some(resp) => expect.same(resp.status, expectedStatus)
-      case None       => failure(s"${req.uri} route not found")
+  ): IO[Boolean] =
+    routes.run(req).value.flatMap {
+      case Some(resp) => IO.pure(resp.status == expectedStatus)
+      case None =>
+        IO.pure(println(s"${req.uri} route not found")).as(false)
     }
 
   def expectHttpFailure(
       routes: HttpRoutes[IO],
       req: Request[IO]
-  ): IO[Expectations] =
+  ): IO[Boolean] =
     routes.run(req).value.attempt.map {
-      case Left(_)  => success
-      case Right(_) => failure("expected a failure")
+      case Left(_)  => true
+      case Right(_) => false
     }
 }

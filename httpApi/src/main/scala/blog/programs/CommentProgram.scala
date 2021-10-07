@@ -3,6 +3,7 @@ package blog.programs
 import blog.domain._
 import blog.domain.comments._
 import blog.errors._
+import blog.programs.comment.PathHandlerProgram
 import blog.storage._
 import cats.MonadThrow
 import cats.implicits._
@@ -34,22 +35,28 @@ object CommentProgram {
       commentStorage: CommentStorageDsl[F]
   ): CommentProgram[F] =
     new CommentProgram[F] {
+      private val pathHandler: PathHandlerProgram[F] =
+        PathHandlerProgram.make(commentStorage)
+
       override def create(
           message: CommentMessage,
           userId: UserId,
           postId: PostId,
           commentId: Option[CommentId]
       ): F[Unit] = {
-        getPath(postId, commentId).flatMap( path =>
-        commentStorage
-          .create(
-            CreateComment(
-              CommentId(UUID.randomUUID()),
-              message,
-              userId,
-              path
-            )
-          ))
+        pathHandler
+          .getPath(postId, commentId)
+          .flatMap(path =>
+            commentStorage
+              .create(
+                CreateComment(
+                  CommentId(UUID.randomUUID()),
+                  message,
+                  userId,
+                  path
+                )
+              )
+          )
           .handleErrorWith(_ => throw CreateCommentError)
       }
 
@@ -105,19 +112,6 @@ object CommentProgram {
           case None => none[CustomComment]
           case Some(comment) =>
             if (comment.userId == userId) comment.some else none[CustomComment]
-        }
-
-      private def getPath(
-          postId: PostId,
-          commentIdOpt: Option[CommentId]
-      ): F[CommentMaterializedPath] =
-        commentIdOpt match {
-          case None => CommentMaterializedPath(postId.toString).pure[F]
-          case Some(commentId) =>
-            commentStorage.findById(commentId).map {
-              case None          => throw NoSuchCommentId
-              case Some(comment) => CommentMaterializedPath(comment.path + "." + commentId)
-            }
         }
     }
 }
