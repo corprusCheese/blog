@@ -1,7 +1,8 @@
 package api.suites
 
 import cats.effect.IO
-import cats.implicits.catsSyntaxApplicativeId
+import cats.implicits._
+import fs2.{Pure, Stream}
 import io.circe._
 import io.circe.syntax._
 import org.http4s._
@@ -32,7 +33,11 @@ trait HttpSuite extends SimpleIOSuite with Checkers {
     routes.run(req).value.flatMap {
       case Some(resp) =>
         IO.pure(resp.status == expectedStatus)
-          .flatTap(res => if (!res) println(resp.status).pure[IO] else IO.unit)
+          .flatTap(res =>
+            if (!res) {
+              println(resp.status).pure[IO]
+            } else IO.unit
+          )
       case None =>
         IO.pure(println(s"${req.uri} route not found")).as(false)
     }
@@ -44,5 +49,35 @@ trait HttpSuite extends SimpleIOSuite with Checkers {
     routes.run(req).value.attempt.map {
       case Left(_)  => true
       case Right(_) => false
+    }
+
+  def streamWithBody[A: Encoder](body: A): Stream[IO, Byte] =
+    Stream.emits[IO, Byte](body.asJson.toString.getBytes)
+
+  def expectFromQuery[A: Encoder, B: Decoder](
+      routes: HttpRoutes[IO],
+      req: Request[IO],
+      body: A
+  ): IO[Option[B]] = {
+    routes.run(req.withBodyStream(streamWithBody(body))).value.flatMap {
+      case Some(resp) =>
+        resp.asJson.map(_.as[B]).flatMap(IO.fromEither(_).some.sequence)
+      case None => none[B].pure[IO]
+    }
+  }
+
+  def expectHttpStatusFromQuery[A: Encoder](
+      routes: HttpRoutes[IO],
+      req: Request[IO],
+      body: A
+  )(
+      expectedStatus: Status
+  ): IO[Boolean] =
+    routes.run(req.withBodyStream(streamWithBody(body))).value.flatMap {
+      case Some(resp) =>
+        IO.pure(resp.status == expectedStatus)
+          .flatTap(res => if (!res) println(resp.status).pure[IO] else IO.unit)
+      case None =>
+        IO.pure(println(s"${req.uri} route not found")).as(false)
     }
 }

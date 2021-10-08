@@ -7,6 +7,7 @@ import blog.storage._
 import cats.effect.{IO, Resource}
 import eu.timepit.refined.types.string.NonEmptyString
 import impl._
+import org.http4s.{HttpRoutes, Request, Uri}
 import org.typelevel.log4cats.SelfAwareStructuredLogger
 import org.typelevel.log4cats.noop.NoOpLogger
 
@@ -32,8 +33,8 @@ abstract class TestAuth extends HttpSuite {
       cs <- TestCommentStorage.resource[IO]
       ts <- TestTagStorage.resource[IO]
       authCache <- TestAuthCache.resource[IO]
-      tokenExpiration = TokenExpiration(10.seconds)
-      key = JwtAccessTokenKey.apply(NonEmptyString("secret test key"))
+      tokenExpiration = TokenExpiration(30.minutes)
+      key = JwtAccessTokenKey.apply(NonEmptyString("secret"))
       tokenManager <- TokenManager.resource(tokenExpiration, key)
       ac = AuthCommands.make(authCache, us, tokenManager, tokenExpiration)
     } yield (us, ps, cs, ts, authCache, ac)

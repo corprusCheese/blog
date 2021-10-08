@@ -4,7 +4,7 @@ import blog.domain._
 import blog.domain.posts._
 import blog.errors._
 import blog.storage._
-import cats.MonadThrow
+import cats.{Monad, MonadThrow}
 import cats.data.NonEmptyVector
 import cats.implicits._
 import org.http4s.circe.JsonDecoder
@@ -42,16 +42,20 @@ object PostProgram {
           tagIds: Vector[TagId],
           userId: UserId
       ): F[Unit] =
-        postStorage
-          .create(
-            CreatePost(
-              PostId(UUID.randomUUID()),
-              message,
-              userId,
-              tagIds
-            )
-          )
-          .handleErrorWith(_ => throw CreatePostError)
+        checkIfTagIdsExisting(tagIds).flatMap {
+          case false => throw PostTagsAreNotExisting
+          case true =>
+            postStorage
+              .create(
+                CreatePost(
+                  PostId(UUID.randomUUID()),
+                  message,
+                  userId,
+                  tagIds
+                )
+              )
+              .handleErrorWith(_ => throw CreatePostError)
+        }
 
       override def update(
           postId: PostId,
@@ -59,18 +63,22 @@ object PostProgram {
           tagIds: Vector[TagId],
           userId: UserId
       ): F[Unit] =
-        postBelongsToUser(userId, postId).flatMap {
-          case None => throw PostDontBelongToUser
-          case _ =>
-            postStorage
-              .update(
-                UpdatePost(
-                  postId,
-                  message,
-                  tagIds
-                )
-              )
-              .handleErrorWith(_ => throw UpdatePostError)
+        checkIfTagIdsExisting(tagIds).flatMap {
+          case false => throw PostTagsAreNotExisting
+          case true =>
+            postBelongsToUser(userId, postId).flatMap {
+              case None => throw PostDontBelongToUser
+              case _ =>
+                postStorage
+                  .update(
+                    UpdatePost(
+                      postId,
+                      message,
+                      tagIds
+                    )
+                  )
+                  .handleErrorWith(_ => throw UpdatePostError)
+            }
         }
 
       override def delete(postId: PostId, userId: UserId): F[Unit] =
@@ -101,6 +109,16 @@ object PostProgram {
         postStorage
           .getAllUserPosts(userId)
 
+      override def paginatePostsByTag(
+          page: Page,
+          tagId: TagId
+      ): F[Vector[Post]] =
+        postStorage
+          .fetchPostForPaginationWithTags(
+            NonEmptyVector.one(tagId),
+            page
+          )
+
       private def postBelongsToUser(
           userId: UserId,
           postId: PostId
@@ -111,14 +129,12 @@ object PostProgram {
             if (post.userId == userId) post.some else none[Post]
         }
 
-      override def paginatePostsByTag(
-          page: Page,
-          tagId: TagId
-      ): F[Vector[Post]] =
-        postStorage
-          .fetchPostForPaginationWithTags(
-            NonEmptyVector.one(tagId),
-            page
-          )
+      private def checkIfTagIdsExisting(tagIds: Vector[TagId]): F[Boolean] =
+        tagIds match {
+          case v if v == Vector.empty => true.pure[F]
+          case v if v != Vector.empty =>
+            tagStorage.fetchAll
+              .map(_.map(_.tagId).intersect(tagIds) == tagIds)
+        }
     }
 }

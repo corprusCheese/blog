@@ -20,8 +20,8 @@ import org.http4s.{HttpRoutes, Uri}
 import java.util.UUID
 
 /**
- * test without forall using
- */
+  * test without forall using
+  */
 object TagsTest extends TestCommon {
 
   private def routesForTesting(
@@ -33,18 +33,18 @@ object TagsTest extends TestCommon {
     resourceStorages.use {
       case (_, ps, _, ts) =>
         for {
-          e <- expectHttpStatus(
+          noTags <- expectHttpStatus(
             routesForTesting(ts, ps),
             GET(uri"/tag/all")
           )(NotFound)
           _ <- createTag(ts)
           _ <- createTag(ts)
           expectedBody <- ts.fetchAll
-          e1 <- expectHttpBodyAndStatus(
+          expected2Tags <- expectHttpBodyAndStatus(
             routesForTesting(ts, ps),
             GET(uri"/tag/all")
           )(expectedBody, Ok)
-        } yield expect.all(e, e1)
+        } yield expect.all(noTags, expected2Tags)
     }
   }
 
@@ -53,21 +53,21 @@ object TagsTest extends TestCommon {
       case (_, ps, _, ts) =>
         for {
           sample <- tagGen.sample.pure[IO]
-          e <- expectHttpStatus(
+          noId <- expectHttpStatus(
             routesForTesting(ts, ps),
             GET(Uri.unsafeFromString(s"/tag/id/${sample.get.tagId}"))
           )(NotFound)
           uuid <- createTag(ts)
           getBody <- ts.findById(TagId(uuid))
-          e1 <- expectHttpBodyAndStatus(
+          existId <- expectHttpBodyAndStatus(
             routesForTesting(ts, ps),
             GET(Uri.unsafeFromString(s"/tag/id/${uuid}"))
           )(getBody.get, Ok)
-          e2 <- expectHttpBodyAndStatus(
+          existName <- expectHttpBodyAndStatus(
             routesForTesting(ts, ps),
             GET(Uri.unsafeFromString(s"/tag/name/${getBody.get.name}"))
           )(Vector(getBody.get), Ok)
-        } yield expect.all(e, e1, e2)
+        } yield expect.all(noId, existId, existName)
     }
   }
 
@@ -75,18 +75,18 @@ object TagsTest extends TestCommon {
     resourceStorages.use {
       case (_, ps, _, ts) =>
         for {
-          e <- expectHttpStatus(
+          noPost <- expectHttpStatus(
             routesForTesting(ts, ps),
             GET(Uri.unsafeFromString(s"/tag/post/${UUID.randomUUID()}"))
           )(NotFound)
           postUuid <- createPost(ps)
           _ <- createTag(ts, Vector(PostId(postUuid)))
           getBody <- ts.getAllPostTags(PostId(postUuid))
-          e1 <- expectHttpBodyAndStatus(
+          postExistsAndTagToo <- expectHttpBodyAndStatus(
             routesForTesting(ts, ps),
             GET(Uri.unsafeFromString(s"/tag/post/$postUuid"))
           )(getBody, Ok)
-        } yield expect.all(e, e1)
+        } yield expect.all(noPost, postExistsAndTagToo)
     }
   }
 }

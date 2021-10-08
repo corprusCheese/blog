@@ -54,17 +54,17 @@ object CommentsTest extends TestCommon {
                 )
               )
               expectedBody <- cs.fetchAll
-              e <- expectHttpBodyAndStatus(
+              creatingComment <- expectHttpBodyAndStatus(
                 routesForTesting(cs),
                 GET(uri"/comment/all")
               )(expectedBody, Ok)
               _ <- cs.delete(DeleteComment(comment1.commentId))
               _ <- cs.delete(DeleteComment(comment2.commentId))
-              e1 <- expectHttpStatus(
+              deletingAllComments <- expectHttpStatus(
                 routesForTesting(cs),
                 GET(uri"/comment/all")
               )(NotFound)
-            } yield expect.all(e, e1)
+            } yield expect.all(creatingComment, deletingAllComments)
         }
     }
   }
@@ -97,17 +97,17 @@ object CommentsTest extends TestCommon {
                 )
               )
               expectedBody <- cs.getActiveUserComments(comment1.userId)
-              e <- expectHttpBodyAndStatus(
+              expected2Comments <- expectHttpBodyAndStatus(
                 routesForTesting(cs),
                 GET(Uri.unsafeFromString(s"/comment/user/${comment1.userId}"))
               )(expectedBody, Ok)
               _ <- cs.delete(DeleteComment(comment1.commentId))
               _ <- cs.delete(DeleteComment(comment2.commentId))
-              e1 <- expectHttpStatus(
+              expected0Comments <- expectHttpStatus(
                 routesForTesting(cs),
                 GET(Uri.unsafeFromString(s"/comment/user/${comment1.userId}"))
               )(NotFound)
-            } yield expect.all(e, e1)
+            } yield expect.all(expected2Comments, expected0Comments)
         }
     }
   }
@@ -145,7 +145,7 @@ object CommentsTest extends TestCommon {
               )
               all <- cs.fetchAll
               fromUser <- cs.getAllPostComments(post.postId)
-              e <- expectHttpBodyAndStatus(
+              expectedOnly1 <- expectHttpBodyAndStatus(
                 routesForTesting(cs),
                 GET(Uri.unsafeFromString(s"/comment/post/${post.postId}"))
               )(fromUser, Ok)
@@ -153,7 +153,7 @@ object CommentsTest extends TestCommon {
               all != fromUser,
               fromUser.head.commentId == comment1.commentId,
               fromUser.size == 1,
-              e
+              expectedOnly1
             )
         }
     }
@@ -167,11 +167,9 @@ object CommentsTest extends TestCommon {
     } yield (c1, c2, p)
 
     forall(gen) {
-      case (comment1, comment2, post) =>
+      case (comment1, _, _) =>
         resourceStorages.use {
           case (_, _, cs, _) =>
-            val pathHandlerProgram: PathHandlerProgram[IO] =
-              PathHandlerProgram.make(cs)
             for {
               e <- expectHttpStatus(
                 routesForTesting(cs),

@@ -78,7 +78,8 @@ lazy val http = (project in file("httpApi"))
       "org.typelevel" %% "log4cats-noop" % "2.1.1",
       "ch.qos.logback" % "logback-classic" % "1.2.6",
       "dev.profunktor" %% "http4s-jwt-auth" % "1.0.0",
-      "com.github.pureconfig" %% "pureconfig" % "0.17.0"
+      "com.github.pureconfig" %% "pureconfig" % "0.17.0",
+      "org.typelevel" %% "jawn-fs2" % "2.0.0"
     )
   )
   .dependsOn(core, storages, coreTests % Test)

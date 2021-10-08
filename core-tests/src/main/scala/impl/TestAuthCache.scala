@@ -7,6 +7,7 @@ import cats.effect.Resource
 import cats.effect.kernel.Ref
 import dev.profunktor.auth.jwt._
 import cats.implicits._
+import io.circe.syntax.EncoderOps
 
 import scala.concurrent.duration._
 
@@ -17,18 +18,20 @@ case class TestAuthCache[F[_]: Monad](
     inMemoryVector.get.map(_.find(_._1 == userId.show).map(_._2))
 
   override def getUserAsString(token: JwtToken): F[Option[String]] =
-    inMemoryVector.get.map(_.find(_._2 == token.value).map(_._1))
+    inMemoryVector.get.map(_.find(_._1 == token.value).map(_._2))
 
   override def setToken(
       user: users.User,
       token: JwtToken,
-      timeout: FiniteDuration = 10.seconds
+      timeout: FiniteDuration
   ): F[Unit] =
-    inMemoryVector.update(_ :+ (user.userId.show, token.value))
+    inMemoryVector
+      .update(_ :+ (user.userId.show, token.value))
+      .flatMap(_ => inMemoryVector.update(_ :+ (token.value, user.asJson.toString)))
 
   override def delToken(userId: UserId, token: JwtToken): F[Unit] =
     inMemoryVector.update(
-      _.filter(c => c._1 != userId.show && c._2 != token.value)
+      _.filter(c => c._1 != userId.show && c._1 != token.value)
     )
 }
 

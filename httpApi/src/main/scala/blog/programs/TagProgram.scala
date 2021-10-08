@@ -1,10 +1,11 @@
 package blog.programs
 
 import blog.domain._
+import blog.domain.posts.Post
 import blog.domain.tags._
-import blog.errors.{CreateTagError, UpdateTagError, UpdateTagWithNotYoursPosts}
+import blog.errors._
 import blog.storage.{PostStorageDsl, TagStorageDsl}
-import cats.MonadThrow
+import cats.{Monad, MonadThrow}
 import cats.implicits._
 import org.http4s.circe.JsonDecoder
 
@@ -31,16 +32,24 @@ object TagProgram {
       postStorage: PostStorageDsl[F]
   ): TagProgram[F] =
     new TagProgram[F] {
-      override def create(tagName: TagName, postIds: Vector[PostId]): F[Unit] =
-        tagStorage
-          .create(
-            TagCreate(
-              TagId(UUID.randomUUID()),
-              tagName,
-              postIds
-            )
-          )
-          .handleErrorWith(_ => throw CreateTagError)
+      override def create(
+          tagName: TagName,
+          postIds: Vector[PostId]
+      ): F[Unit] = {
+        checkIfPostIdsExisting(postIds).flatMap {
+          case false => throw TagPostsAreNotExisting
+          case true =>
+            tagStorage
+              .create(
+                TagCreate(
+                  TagId(UUID.randomUUID()),
+                  tagName,
+                  postIds
+                )
+              )
+              .handleErrorWith(_ => throw CreateTagError)
+        }
+      }
 
       override def update(
           tagId: TagId,
@@ -87,5 +96,16 @@ object TagProgram {
             case v if v.isEmpty && postIds.nonEmpty => false
             case v                                  => v == postIds
           }
+
+      private def checkIfPostIdsExisting(postIds: Vector[PostId]): F[Boolean] =
+        postIds match {
+          case v if v == Vector.empty => true.pure[F]
+          case v if v != Vector.empty =>
+            // todo: method that check such things in db
+            postIds
+              .map(postStorage.findById)
+              .sequence
+              .map(!_.exists(_ == none[Post]))
+        }
     }
 }

@@ -21,8 +21,8 @@ import org.http4s.{HttpRoutes, Uri}
 import java.util.UUID
 
 /**
- * test without forall using
- */
+  * test without forall using
+  */
 object PostsTest extends TestCommon {
 
   private def routesForTesting(
@@ -36,7 +36,7 @@ object PostsTest extends TestCommon {
     resourceStorages.use {
       case (_, ps, cs, ts) =>
         for {
-          e <- expectHttpStatus(
+          emptyStorage <- expectHttpStatus(
             routesForTesting(ps, cs, ts),
             GET(uri"/post/all")
           )(NotFound)
@@ -44,20 +44,25 @@ object PostsTest extends TestCommon {
           _ <- createPost(ps)
           _ <- createPost(ps)
           expectedBody <- ps.fetchForPagination(0)
-          e1 <- expectHttpBodyAndStatus(
+          page0 <- expectHttpBodyAndStatus(
             routesForTesting(ps, cs, ts),
             GET(uri"/post/all")
           )(expectedBody, Ok)
-          e2 <- expectHttpStatus(
+          page1When3Items <- expectHttpStatus(
             routesForTesting(ps, cs, ts),
             GET(uri"/post/all?page=1")
           )(NotFound)
           _ <- createPost(ps)
-          e3 <- expectHttpStatus(
+          page1When4Items <- expectHttpStatus(
             routesForTesting(ps, cs, ts),
             GET(uri"/post/all?page=1")
           )(Ok)
-        } yield expect.all(e, e1, e2, e3)
+        } yield expect.all(
+          emptyStorage,
+          page0,
+          page1When3Items,
+          page1When4Items
+        )
     }
   }
 
@@ -66,16 +71,16 @@ object PostsTest extends TestCommon {
       case (_, ps, cs, ts) =>
         for {
           uuidRandom <- UUID.randomUUID().pure[IO]
-          e <- expectHttpStatus(
+          notExistingId <- expectHttpStatus(
             routesForTesting(ps, cs, ts),
             GET(Uri.unsafeFromString(s"/post/$uuidRandom"))
           )(NotFound)
           uuid <- createPost(ps)
-          e1 <- expectHttpStatus(
+          existingId <- expectHttpStatus(
             routesForTesting(ps, cs, ts),
             GET(Uri.unsafeFromString(s"/post/$uuid"))
           )(Ok)
-        } yield expect.all(e, e1)
+        } yield expect.all(notExistingId, existingId)
     }
   }
 
@@ -85,11 +90,11 @@ object PostsTest extends TestCommon {
         for {
           tagUuid <- createTag(ts)
           _ <- createPost(ps, Vector(TagId(tagUuid)))
-          e <- expectHttpStatus(
+          existingId <- expectHttpStatus(
             routesForTesting(ps, cs, ts),
             GET(Uri.unsafeFromString(s"/post/tag/$tagUuid"))
           )(Ok)
-        } yield expect.all(e)
+        } yield expect.all(existingId)
     }
   }
 
@@ -107,11 +112,11 @@ object PostsTest extends TestCommon {
               sample.get.password
             )
           )
-          e <- expectHttpStatus(
+          existingId <- expectHttpStatus(
             routesForTesting(ps, cs, ts),
             GET(Uri.unsafeFromString(s"/post/user/${opt.get.userId}"))
           )(Ok)
-        } yield expect.all(e)
+        } yield expect.all(existingId)
     }
   }
 }
