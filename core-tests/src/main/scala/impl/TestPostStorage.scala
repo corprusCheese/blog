@@ -65,6 +65,10 @@ case class TestPostStorage[F[_]: Monad](
   override def update(update: UpdatePost): F[Unit] =
     for {
       get <- inMemoryVector.get
+      _ = get.find(post => post.postId == update.postId) match {
+        case None => throw new Exception("no update")
+        case _ => ()
+      }
       newVector = get.map(post =>
         if (post.postId == update.postId)
           Post(update.postId, update.message, post.userId)

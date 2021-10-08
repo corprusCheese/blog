@@ -32,7 +32,8 @@ trait CommentProgram[F[_]] {
 
 object CommentProgram {
   def make[F[_]: JsonDecoder: MonadThrow](
-      commentStorage: CommentStorageDsl[F]
+      commentStorage: CommentStorageDsl[F],
+      postStorage: PostStorageDsl[F]
   ): CommentProgram[F] =
     new CommentProgram[F] {
       private val pathHandler: PathHandlerProgram[F] =
@@ -44,20 +45,24 @@ object CommentProgram {
           postId: PostId,
           commentId: Option[CommentId]
       ): F[Unit] = {
-        pathHandler
-          .getPath(postId, commentId)
-          .flatMap(path =>
-            commentStorage
-              .create(
-                CreateComment(
-                  CommentId(UUID.randomUUID()),
-                  message,
-                  userId,
-                  path
-                )
+        checkPathInDb(postId, commentId).flatMap {
+          case false => throw ImpossibleMaterializedPath
+          case true =>
+            pathHandler
+              .getPath(postId, commentId)
+              .flatMap(path =>
+                commentStorage
+                  .create(
+                    CreateComment(
+                      CommentId(UUID.randomUUID()),
+                      message,
+                      userId,
+                      path
+                    )
+                  )
               )
-          )
-          .handleErrorWith(_ => throw CreateCommentError)
+              .handleErrorWith(_ => throw CreateCommentError)
+        }
       }
 
       override def update(
@@ -112,6 +117,19 @@ object CommentProgram {
           case None => none[CustomComment]
           case Some(comment) =>
             if (comment.userId == userId) comment.some else none[CustomComment]
+        }
+
+      private def checkPathInDb(
+          postId: PostId,
+          commentId: Option[CommentId]
+      ): F[Boolean] =
+        postStorage.findById(postId).flatMap {
+          case None => false.pure[F]
+          case Some(_) =>
+            commentId match {
+              case Some(x) => commentStorage.findById(x).map(_.nonEmpty)
+              case None    => true.pure[F]
+            }
         }
     }
 }

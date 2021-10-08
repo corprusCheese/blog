@@ -15,6 +15,6 @@ object params {
   def getVectorFromOptionNev[A](value: Option[NonEmptyVector[A]]): Vector[A] =
     value match {
       case None => Vector.empty[A]
-      case Some(in) => in.toVector
+      case Some(in) => in.toVector.distinct
     }
 }

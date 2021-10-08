@@ -53,6 +53,10 @@ case class TestCommentStorage[F[_]: Monad](
   override def update(update: UpdateComment): F[Unit] =
     for {
       get <- inMemoryVector.get
+      _ = get.find(comment => comment.commentId == update.commentId) match {
+        case None => throw new Exception("no update")
+        case _ => ()
+      }
       newVector = get.map(comment =>
         if (comment.commentId == update.commentId)
           Comment(

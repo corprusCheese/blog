@@ -23,7 +23,7 @@ package object routes {
     val authProgram: AuthProgram[F] = AuthProgram.make(authCommands)
     val postProgram: PostProgram[F] = PostProgram.make(ps, cs, ts)
     val tagProgram: TagProgram[F] = TagProgram.make(ts, ps)
-    val commentProgram: CommentProgram[F] = CommentProgram.make(cs)
+    val commentProgram: CommentProgram[F] = CommentProgram.make(cs, ps)
     // routes
 
     val authRoutes = Auth[F](authProgram).routes(am)

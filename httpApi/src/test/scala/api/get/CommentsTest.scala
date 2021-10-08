@@ -22,9 +22,10 @@ import org.http4s.syntax.literals._
 object CommentsTest extends TestCommon {
 
   private def routesForTesting(
-      cs: CommentStorageDsl[IO]
+      cs: CommentStorageDsl[IO],
+      ps: PostStorageDsl[IO]
   ): HttpRoutes[IO] =
-    Comments[IO](CommentProgram.make(cs)).routesWithoutAuthOnly
+    Comments[IO](CommentProgram.make(cs, ps)).routesWithoutAuthOnly
 
   test("fetch all") {
     val gen = for {
@@ -35,7 +36,9 @@ object CommentsTest extends TestCommon {
     forall(gen) {
       case (comment1, comment2) =>
         resourceStorages.use {
-          case (_, _, cs, _) =>
+          case (_, ps, cs, _) =>
+            val routes = routesForTesting(cs, ps)
+            val uri = uri"/comment/all"
             for {
               _ <- cs.create(
                 CreateComment(
@@ -55,14 +58,14 @@ object CommentsTest extends TestCommon {
               )
               expectedBody <- cs.fetchAll
               creatingComment <- expectHttpBodyAndStatus(
-                routesForTesting(cs),
-                GET(uri"/comment/all")
+                routes,
+                GET(uri)
               )(expectedBody, Ok)
               _ <- cs.delete(DeleteComment(comment1.commentId))
               _ <- cs.delete(DeleteComment(comment2.commentId))
               deletingAllComments <- expectHttpStatus(
-                routesForTesting(cs),
-                GET(uri"/comment/all")
+                routes,
+                GET(uri)
               )(NotFound)
             } yield expect.all(creatingComment, deletingAllComments)
         }
@@ -78,7 +81,9 @@ object CommentsTest extends TestCommon {
     forall(gen) {
       case (comment1, comment2) =>
         resourceStorages.use {
-          case (_, _, cs, _) =>
+          case (_, ps, cs, _) =>
+            val routes = routesForTesting(cs, ps)
+            val uri = uri"/comment/user"
             for {
               _ <- cs.create(
                 CreateComment(
@@ -98,14 +103,14 @@ object CommentsTest extends TestCommon {
               )
               expectedBody <- cs.getActiveUserComments(comment1.userId)
               expected2Comments <- expectHttpBodyAndStatus(
-                routesForTesting(cs),
-                GET(Uri.unsafeFromString(s"/comment/user/${comment1.userId}"))
+                routes,
+                GET(Uri.unsafeFromString(s"$uri/${comment1.userId}"))
               )(expectedBody, Ok)
               _ <- cs.delete(DeleteComment(comment1.commentId))
               _ <- cs.delete(DeleteComment(comment2.commentId))
               expected0Comments <- expectHttpStatus(
-                routesForTesting(cs),
-                GET(Uri.unsafeFromString(s"/comment/user/${comment1.userId}"))
+                routes,
+                GET(Uri.unsafeFromString(s"$uri/${comment1.userId}"))
               )(NotFound)
             } yield expect.all(expected2Comments, expected0Comments)
         }
@@ -122,9 +127,10 @@ object CommentsTest extends TestCommon {
     forall(gen) {
       case (comment1, comment2, post) =>
         resourceStorages.use {
-          case (_, _, cs, _) =>
-            val pathHandlerProgram: PathHandlerProgram[IO] =
-              PathHandlerProgram.make(cs)
+          case (_, ps, cs, _) =>
+            val pathHandlerProgram = PathHandlerProgram.make(cs)
+            val routes = routesForTesting(cs, ps)
+            val uri = uri"/comment/post"
             for {
               path1 <- pathHandlerProgram.getPath(post.postId, None)
               _ <- cs.create(
@@ -146,8 +152,8 @@ object CommentsTest extends TestCommon {
               all <- cs.fetchAll
               fromUser <- cs.getAllPostComments(post.postId)
               expectedOnly1 <- expectHttpBodyAndStatus(
-                routesForTesting(cs),
-                GET(Uri.unsafeFromString(s"/comment/post/${post.postId}"))
+                routes,
+                GET(Uri.unsafeFromString(s"$uri/${post.postId}"))
               )(fromUser, Ok)
             } yield expect.all(
               all != fromUser,
@@ -169,11 +175,13 @@ object CommentsTest extends TestCommon {
     forall(gen) {
       case (comment1, _, _) =>
         resourceStorages.use {
-          case (_, _, cs, _) =>
+          case (_, ps, cs, _) =>
+            val routes = routesForTesting(cs, ps)
+            val uri = uri"/comment"
             for {
               e <- expectHttpStatus(
-                routesForTesting(cs),
-                GET(Uri.unsafeFromString(s"/comment/${comment1.commentId}"))
+                routes,
+                GET(Uri.unsafeFromString(s"$uri/${comment1.commentId}"))
               )(NotFound)
               _ <- cs.create(
                 CreateComment(
@@ -184,8 +192,8 @@ object CommentsTest extends TestCommon {
                 )
               )
               e1 <- expectHttpBodyAndStatus(
-                routesForTesting(cs),
-                GET(Uri.unsafeFromString(s"/comment/${comment1.commentId}"))
+                routes,
+                GET(Uri.unsafeFromString(s"$uri/${comment1.commentId}"))
               )(comment1, Ok)
             } yield expect.all(e, e1)
         }

@@ -54,5 +54,5 @@ object errors {
   case object PostTagsAreNotExisting extends CustomError("Post tags ids are not existing")
   case object TagPostsAreNotExisting extends CustomError("Tag posts ids are not existing")
 
-
+  case object ImpossibleMaterializedPath extends CustomError("Comment or post are not existed")
 }

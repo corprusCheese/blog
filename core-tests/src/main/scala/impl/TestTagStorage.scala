@@ -50,10 +50,14 @@ case class TestTagStorage[F[_]: Monad](
   override def update(update: TagUpdate): F[Unit] =
     for {
       get <- inMemoryVector.get
+      _ = get.find(_.tagId == update.tagId) match {
+        case None => throw new Exception("no update")
+        case _ => ()
+      }
       newVector = get.map(tag =>
-        if (tag.tagId == update.tagId)
+        if (tag.tagId == update.tagId) {
           Tag(update.tagId, update.name)
-        else tag
+        } else tag
       )
       _ <- inMemoryVector.set(newVector)
       _ <- postTagsStorage.deleteTagId(update.tagId)

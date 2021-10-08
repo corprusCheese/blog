@@ -76,7 +76,7 @@ trait HttpSuite extends SimpleIOSuite with Checkers {
     routes.run(req.withBodyStream(streamWithBody(body))).value.flatMap {
       case Some(resp) =>
         IO.pure(resp.status == expectedStatus)
-          .flatTap(res => if (!res) println(resp.status).pure[IO] else IO.unit)
+          .flatTap(res => if (!res) resp.asJson.map( x =>println(resp.status, x)) else IO.unit)
       case None =>
         IO.pure(println(s"${req.uri} route not found")).as(false)
     }
