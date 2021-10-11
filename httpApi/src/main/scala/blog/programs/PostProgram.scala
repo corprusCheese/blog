@@ -4,7 +4,7 @@ import blog.domain._
 import blog.domain.posts._
 import blog.errors._
 import blog.storage._
-import cats.{Monad, MonadThrow}
+import cats.MonadThrow
 import cats.data.NonEmptyVector
 import cats.implicits._
 import org.http4s.circe.JsonDecoder

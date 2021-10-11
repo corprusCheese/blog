@@ -3,15 +3,14 @@ package blog.config
 import blog.domain.PerPage
 import cats.MonadThrow
 import cats.effect.Resource
+import cats.implicits._
+import com.comcast.ip4s.{Host, Port}
 import eu.timepit.refined.auto._
 import eu.timepit.refined.cats._
-import pureconfig._
-import pureconfig.generic.auto._
-import cats.implicits._
-import com.comcast.ip4s.{Host, IpLiteralSyntax, Port}
 import eu.timepit.refined.types.numeric.NonNegInt
 import eu.timepit.refined.types.string.NonEmptyString
-import io.estatico.newtype.macros.newtype
+import pureconfig._
+import pureconfig.generic.auto._
 
 import scala.concurrent.duration.FiniteDuration
 

@@ -1,21 +1,20 @@
 package blog.routes
 
-import blog.domain.comments._
 import blog.domain._
-import blog.domain.users.User
+import blog.domain.comments._
 import blog.domain.requests._
+import blog.domain.users.User
 import blog.errors._
 import blog.programs.CommentProgram
-import blog.storage.{CommentStorageDsl, PostStorageDsl}
+import blog.routes.params._
+import blog.utils.ext.refined._
 import cats.MonadThrow
 import cats.implicits._
 import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
-import org.http4s.{AuthedRoutes, HttpRoutes}
 import org.http4s.circe.JsonDecoder
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.{AuthMiddleware, Router}
-import blog.utils.ext.refined._
-import io.circe.Encoder.AsArray.importedAsArrayEncoder
+import org.http4s.{AuthedRoutes, HttpRoutes}
 
 import java.util.UUID
 
@@ -64,25 +63,25 @@ final case class Comments[F[_]: JsonDecoder: MonadThrow](
         case _               => NotFound("no comments at all")
       }
 
-    case GET -> Root / commentId =>
+    case GET -> Root / CommentIdVar(commentId) =>
       commentProgram
-        .findById(CommentId(UUID.fromString(commentId)))
+        .findById(commentId)
         .flatMap {
           case v if v.nonEmpty => Ok(v)
           case _               => NotFound("no comments with such id")
         }
 
-    case GET -> Root / "post" / postId =>
+    case GET -> Root / "post" / PostIdVar(postId) =>
       commentProgram
-        .getAllPostComments(PostId(UUID.fromString(postId)))
+        .getAllPostComments(postId)
         .flatMap {
           case v if v.nonEmpty => Ok(v)
           case _               => NotFound("no comments of such post id")
         }
 
-    case GET -> Root / "user" / userId =>
+    case GET -> Root / "user" / UserIdVar(userId) =>
       commentProgram
-        .getActiveUserComments(UserId(UUID.fromString(userId)))
+        .getActiveUserComments(userId)
         .flatMap {
           case v if v.nonEmpty => Ok(v)
           case _               => NotFound("no comments of such user id")

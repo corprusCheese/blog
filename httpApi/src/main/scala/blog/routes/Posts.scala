@@ -5,6 +5,7 @@ import blog.domain.requests._
 import blog.domain.users._
 import blog.errors._
 import blog.programs.PostProgram
+import blog.routes.params._
 import blog.utils.ext.refined._
 import blog.utils.routes.params._
 import cats.MonadThrow
@@ -73,26 +74,26 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
           case _               => NotFound(s"no posts on page $page")
         }
 
-    case GET -> Root / "user" / userId =>
+    case GET -> Root / "user" / UserIdVar(userId) =>
       postProgram
-        .findByUser(UserId(UUID.fromString(userId)))
+        .findByUser(userId)
         .flatMap {
           case v if v.nonEmpty => Ok(v)
           case _               => NotFound("no posts for such user")
         }
 
-    case GET -> Root / postId =>
+    case GET -> Root / PostIdVar(postId) =>
       postProgram
-        .findById(PostId(UUID.fromString(postId)))
+        .findById(postId)
         .flatMap {
           case v if v.nonEmpty => Ok(v)
           case _               => NotFound("no posts with such id")
         }
 
-    case req @ GET -> Root / "tag" / tagId =>
+    case req @ GET -> Root / "tag" / TagIdVar(tagId) =>
       val page: Page = getPage(req)
       postProgram
-        .paginatePostsByTag(page, TagId(UUID.fromString(tagId)))
+        .paginatePostsByTag(page, tagId)
         .flatMap {
           case v if v.nonEmpty => Ok(v)
           case _               => NotFound(s"no post with this tag on page $page")
