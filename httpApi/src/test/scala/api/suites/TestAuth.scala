@@ -2,7 +2,7 @@ package api.suites
 
 import api.post.PostsTest.{POST_AUTH, expectHttpStatus}
 import blog.auth.{AuthCommands, TokenManager}
-import blog.config.{JwtAccessTokenKey, TokenExpiration}
+import blog.config.types.{JwtAccessTokenKey, TokenExpiration}
 import blog.domain.users.User
 import blog.storage._
 import cats.effect.{IO, Resource}

@@ -1,8 +1,8 @@
 package blog.resources
 
-import blog.config.HttpServerConfig
+import blog.config.types.HttpServerConfig
 import cats.effect.kernel.{Async, Resource}
-import com.comcast.ip4s.IpLiteralSyntax
+import com.comcast.ip4s.{Host, IpLiteralSyntax, Port}
 import org.http4s.HttpApp
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Server
@@ -20,11 +20,12 @@ object HttpServer {
   private def showEmberBanner[F[_]: Logger](s: Server): F[Unit] =
     Logger[F].info(s"\n${Banner.mkString("\n")}\nHTTP Server started at ${s.address}")
 
+
   implicit def forAsyncLogger[F[_]: Async: Logger]: HttpServer[F] =
     (httpApp: HttpApp[F], config: HttpServerConfig) => EmberServerBuilder
       .default[F]
-      .withPort(config.port)
-      .withHost(config.host)
+      .withPort(Port.fromString(config.port.value).get)
+      .withHostOption(Host.fromString(config.host.value))
       .withHttpApp(httpApp)
       .build
       .evalTap(showEmberBanner[F])

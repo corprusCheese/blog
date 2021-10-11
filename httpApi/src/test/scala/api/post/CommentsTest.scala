@@ -1,7 +1,7 @@
 package api.post
 
 import api.suites.TestAuth
-import blog.config.JwtSecretKey
+import blog.config.types.JwtConfigSecretKey
 import blog.domain.CommentId
 import blog.domain.comments.CreateComment
 import blog.domain.posts.CreatePost
@@ -33,7 +33,7 @@ object CommentsTest extends TestAuth {
     Comments[IO](CommentProgram.make(cs, ps)).routesWithAuthOnly(
       commonAuthMiddleware(
         ac,
-        JwtSecretKey.apply(
+        JwtConfigSecretKey(
           NonEmptyString.unsafeFrom("secret")
         )
       )

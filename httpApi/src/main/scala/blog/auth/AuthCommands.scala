@@ -1,6 +1,7 @@
 package blog.auth
 
-import blog.config.TokenExpiration
+
+import blog.config.types._
 import blog.domain._
 import blog.domain.users.{User, UserCreate}
 import blog.storage._

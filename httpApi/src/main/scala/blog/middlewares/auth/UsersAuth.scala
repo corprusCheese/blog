@@ -8,12 +8,15 @@ import dev.profunktor.auth.jwt.JwtToken
 import io.circe.parser.decode
 import pdi.jwt.JwtClaim
 
-object UsersAuth {
+trait UsersAuth[F[_], A] {
+  def findUser(token: JwtToken)(claim: JwtClaim): F[Option[A]]
+}
 
+object UsersAuth {
   def make[F[_]: Monad](
       cache: AuthCacheDsl[F]
-  ): UsersAuthDsl[F, User] = {
-    new UsersAuthDsl[F, User] {
+  ): UsersAuth[F, User] = {
+    new UsersAuth[F, User] {
       override def findUser(token: JwtToken)(claim: JwtClaim): F[Option[User]] =
         cache
           .getUserAsString(token)

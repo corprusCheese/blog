@@ -1,7 +1,7 @@
 package api.post
 
 import api.suites.TestAuth
-import blog.config.JwtSecretKey
+import blog.config.types.JwtConfigSecretKey
 import blog.domain.TagId
 import blog.domain.posts.CreatePost
 import blog.domain.requests.{PostChanging, PostCreation, PostRemoving}
@@ -31,7 +31,7 @@ object PostsTest extends TestAuth {
     Posts[IO](PostProgram.make(ps, cs, ts)).routesWithAuthOnly(
       commonAuthMiddleware(
         ac,
-        JwtSecretKey.apply(
+        JwtConfigSecretKey(
           NonEmptyString.unsafeFrom("secret")
         )
       )

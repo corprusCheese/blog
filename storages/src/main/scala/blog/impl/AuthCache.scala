@@ -41,7 +41,7 @@ case class AuthCache[F[_]: Monad](
     } yield ()
 
   private def prefixToken(token: JwtToken): String = "token:" + token.value
-  private def prefixUserId(userId: UserId): String = "userId:"+userId.show
+  private def prefixUserId(userId: UserId): String = "userId:" + userId.show
 }
 
 object AuthCache {

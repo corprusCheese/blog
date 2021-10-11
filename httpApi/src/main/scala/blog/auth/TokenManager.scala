@@ -1,11 +1,11 @@
 package blog.auth
 
 import blog.config
-import blog.config.{JwtAccessTokenKey, TokenExpiration}
+import blog.config.types._
 import cats._
 import cats.effect.{Resource, Sync}
 import cats.implicits._
-import dev.profunktor.auth.jwt._
+import dev.profunktor.auth.jwt.{JwtSecretKey, JwtToken, jwtEncode}
 import eu.timepit.refined.auto._
 import io.circe.syntax._
 import org.typelevel.log4cats.Logger

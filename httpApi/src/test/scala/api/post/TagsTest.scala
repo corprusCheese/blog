@@ -1,7 +1,7 @@
 package api.post
 
 import api.suites.TestAuth
-import blog.config.JwtSecretKey
+import blog.config.types.JwtConfigSecretKey
 import blog.domain.TagId
 import blog.domain.posts.CreatePost
 import blog.domain.requests.{TagChanging, TagCreation}
@@ -30,7 +30,7 @@ object TagsTest extends TestAuth {
     Tags(TagProgram.make(ts, ps)).routesWithAuthOnly(
       commonAuthMiddleware(
         ac,
-        JwtSecretKey.apply(
+        JwtConfigSecretKey(
           NonEmptyString.unsafeFrom("secret")
         )
       )

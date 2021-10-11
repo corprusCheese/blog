@@ -5,8 +5,6 @@ import cats.implicits.catsSyntaxOptionId
 import eu.timepit.refined.types.string.NonEmptyString
 import org.http4s.dsl.impl.UUIDVar
 
-import scala.util.Try
-
 object params {
   object PostIdVar{
     def unapply(str: String): Option[PostId] = {
