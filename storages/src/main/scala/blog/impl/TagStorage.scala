@@ -3,16 +3,14 @@ package blog.impl
 import blog.domain._
 import blog.domain.tags._
 import blog.meta._
-import blog.queries.tagQueries
-import blog.queries.tagQueries._
+import blog.queries.TagQueries._
 import blog.storage.TagStorageDsl
 import cats.effect.{MonadCancelThrow, Resource}
 import cats.implicits._
 import doobie.implicits._
-import doobie.util.query.Query0
 import doobie.util.transactor
 import doobie.util.transactor.Transactor
-import doobie.{ConnectionIO, Fragments, Update}
+import doobie.{Fragments, Update}
 import org.typelevel.log4cats.Logger
 
 case class TagStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])

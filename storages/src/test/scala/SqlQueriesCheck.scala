@@ -1,6 +1,6 @@
 import blog.domain.tags.TagCreate
 import blog.impl._
-import blog.queries.tagQueries
+import blog.queries.TagQueries
 import cats.effect._
 import cats.implicits.catsSyntaxApplicativeId
 import eu.timepit.refined.auto._
@@ -29,12 +29,12 @@ object SqlQueriesCheck extends SimpleIOSuite with Matchers with Checkers {
     forall(gen) {
       case (tag, post) =>
         for {
-          _ <- tagQueries.queryForFindById(tag.tagId).check
-          _ <- tagQueries.queryForCreateTag(TagCreate(tag.tagId, tag.name)).check
-          _ <- tagQueries.queryForFetchAll.check
-          _ <- tagQueries.queryForGetPostTags(post.postId).check
-          _ <- tagQueries.queryForFindByName(tag.name).check
-          _ <- tagQueries.queryForUpdateBoundTable(tag.tagId, post.postId).check
+          _ <- TagQueries.queryForFindById(tag.tagId).check
+          _ <- TagQueries.queryForCreateTag(TagCreate(tag.tagId, tag.name)).check
+          _ <- TagQueries.queryForFetchAll.check
+          _ <- TagQueries.queryForGetPostTags(post.postId).check
+          _ <- TagQueries.queryForFindByName(tag.name).check
+          _ <- TagQueries.queryForUpdateBoundTable(tag.tagId, post.postId).check
         } yield expect.all()
     }
   }

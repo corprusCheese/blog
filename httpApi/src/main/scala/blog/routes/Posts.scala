@@ -126,6 +126,6 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
     Router(prefix -> authMiddleware(httpRoutesAuth))
 
   def routes(authMiddleware: AuthMiddleware[F, User]): HttpRoutes[F] =
-    CORS(Router(prefix -> (httpRoutes <+> authMiddleware(httpRoutesAuth))))
+    CORS(Router(prefix -> (authMiddleware(httpRoutesAuth) <+> httpRoutes )))
 
 }

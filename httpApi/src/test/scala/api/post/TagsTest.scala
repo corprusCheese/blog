@@ -170,9 +170,7 @@ object TagsTest extends TestAuth {
               existNotMyPost,
               existMyPost
             )
-
         }
     }
   }
-
 }

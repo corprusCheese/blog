@@ -6,7 +6,7 @@ import blog.meta._
 import doobie.Fragments
 import doobie.implicits.toSqlInterpolator
 
-object tagQueries {
+object TagQueries {
   def queryForFindById[F[_]](id: TagId): doobie.Query0[(TagId, TagName)] =
     sql"""SELECT uuid, name FROM tags WHERE uuid = $id AND deleted = false"""
       .query[(TagId, TagName)]
