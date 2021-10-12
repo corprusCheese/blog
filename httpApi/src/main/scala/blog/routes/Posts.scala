@@ -9,21 +9,36 @@ import blog.routes.params._
 import blog.utils.ext.refined._
 import blog.utils.routes.params._
 import cats.MonadThrow
+import cats.data.Kleisli
+import cats.effect.IO
 import cats.syntax.all._
 import eu.timepit.refined.auto._
+import eu.timepit.refined.types.numeric.NonNegInt
 import org.http4s._
 import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 import org.http4s.circe.JsonDecoder
 import org.http4s.dsl.Http4sDsl
+import org.http4s.implicits.http4sLiteralsSyntax
+import org.http4s.server.middleware.CORS
 import org.http4s.server.{AuthMiddleware, Router}
 
-import java.util.UUID
+import scala.util.Try
 
 final case class Posts[F[_]: JsonDecoder: MonadThrow](
     postProgram: PostProgram[F]
 ) extends Http4sDsl[F] {
 
   private val prefix: String = "/post"
+
+  object OptionalPageQueryParamMatcher
+      extends OptionalQueryParamDecoderMatcherWithDefault[Page]("page", 0)
+
+  implicit val pageQueryParamDecoder: QueryParamDecoder[Page] =
+    QueryParamDecoder[Int].emap(x =>
+      Try(NonNegInt.unsafeFrom(x)).toEither.leftMap(throwable =>
+        ParseFailure(throwable.getMessage, throwable.getMessage)
+      )
+    )
 
   private val httpRoutesAuth: AuthedRoutes[User, F] = AuthedRoutes.of {
     case ar @ POST -> Root / "create" as user =>
@@ -64,9 +79,10 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
       }
   }
 
+  val getPost = List(GET, POST)
+
   private val httpRoutes: HttpRoutes[F] = HttpRoutes.of[F] {
-    case req @ GET -> Root / "all" =>
-      val page: Page = getPage(req)
+    case (method: Method) -> Root / "all" :? OptionalPageQueryParamMatcher(page) if method == GET || method == POST =>
       postProgram
         .paginatePosts(page)
         .flatMap {
@@ -90,8 +106,7 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
           case _               => NotFound("no posts with such id")
         }
 
-    case req @ GET -> Root / "tag" / TagIdVar(tagId) =>
-      val page: Page = getPage(req)
+    case GET -> Root / "tag" / TagIdVar(tagId) :? OptionalPageQueryParamMatcher(page) =>
       postProgram
         .paginatePostsByTag(page, tagId)
         .flatMap {
@@ -111,7 +126,6 @@ final case class Posts[F[_]: JsonDecoder: MonadThrow](
     Router(prefix -> authMiddleware(httpRoutesAuth))
 
   def routes(authMiddleware: AuthMiddleware[F, User]): HttpRoutes[F] =
-    Router(
-      prefix -> (httpRoutes <+> authMiddleware(httpRoutesAuth))
-    )
+    CORS(Router(prefix -> (httpRoutes <+> authMiddleware(httpRoutesAuth))))
+
 }

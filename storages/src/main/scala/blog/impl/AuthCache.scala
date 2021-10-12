@@ -47,6 +47,6 @@ case class AuthCache[F[_]: Monad](
 object AuthCache {
   def resource[F[_]: Monad](
       redis: RedisCommands[F, String, String]
-  ): Resource[F, AuthCacheDsl[F]] =
-    Resource.pure[F, AuthCacheDsl[F]](AuthCache[F](redis))
+  ): Resource[F, AuthCache[F]] =
+    Resource.pure(AuthCache[F](redis))
 }

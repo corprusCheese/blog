@@ -119,6 +119,6 @@ case class CommentStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
 object CommentStorage {
   def resource[F[_]: Logger: MonadCancelThrow](
       tx: transactor.Transactor[F]
-  ): Resource[F, CommentStorageDsl[F]] =
-    Resource.pure[F, CommentStorage[F]](CommentStorage[F](tx))
+  ): Resource[F, CommentStorage[F]] =
+    Resource.pure(CommentStorage[F](tx))
 }

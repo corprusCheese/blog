@@ -14,7 +14,7 @@ import eu.timepit.refined.cats._
 import gen.generators._
 import org.typelevel.log4cats.SelfAwareStructuredLogger
 import org.typelevel.log4cats.noop.NoOpLogger
-import unit.utils.postgres._
+import unit.utils.pgs._
 import weaver.IOSuite
 import weaver.scalacheck.Checkers
 
@@ -32,15 +32,7 @@ object PostgresTest extends IOSuite with Checkers {
 
   override def sharedResource: Resource[IO, Res] =
     afterAll(
-      Resource
-        .pure[IO, Aux[IO, Unit]](
-          Transactor.fromDriverManager[IO](
-            "org.postgresql.Driver",
-            "jdbc:postgresql://0.0.0.0:5433/blog",
-            "admin",
-            "password"
-          )
-        ),
+      Resource.pure[IO, Aux[IO, Unit]](transactor),
       tx => deleteAll(tx)
     )
 
@@ -51,10 +43,12 @@ object PostgresTest extends IOSuite with Checkers {
 
         userStorage.use(us =>
           for {
-            _ <- us.create(UserCreate(user.userId, user.username, user.password))
+            _ <-
+              us.create(UserCreate(user.userId, user.username, user.password))
             o <- us.findById(user.userId)
             y <- us.fetchAll
-            _ <- us.update(UserUpdate(user.userId, user.username, user.password))
+            _ <-
+              us.update(UserUpdate(user.userId, user.username, user.password))
             z <- us.findById(user.userId)
             _ <- us.delete(UserDelete(user.userId))
             q <- us.findByName(user.username)
@@ -77,8 +71,7 @@ object PostgresTest extends IOSuite with Checkers {
 
     forall(gen) {
       case (user, post) =>
-        val postStorage =
-          PostStorage.resource[IO](postgres, perPage)
+        val postStorage = PostStorage.resource[IO](postgres, perPage)
         val userStorage = UserStorage.resource[IO](postgres)
 
         postStorage.use(ps =>
@@ -121,8 +114,7 @@ object PostgresTest extends IOSuite with Checkers {
 
       forall(gen) {
         case (user, post, tag) =>
-          val postStorage =
-            PostStorage.resource[IO](postgres, perPage)
+          val postStorage = PostStorage.resource[IO](postgres, perPage)
           val userStorage = UserStorage.resource[IO](postgres)
           val tagStorage = TagStorage.resource[IO](postgres)
 

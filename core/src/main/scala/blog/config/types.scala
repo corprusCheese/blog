@@ -3,6 +3,8 @@ package blog.config
 import blog.domain.PerPage
 import eu.timepit.refined.types.all.NonEmptyString
 import io.estatico.newtype.macros.newtype
+import pureconfig.generic.auto._
+import eu.timepit.refined.pureconfig._
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -12,7 +14,6 @@ object types {
       port: NonEmptyString
   )
 
-  // todo: newtype
   //@newtype
   case class TokenExpiration(timeout: FiniteDuration)
 
@@ -33,7 +34,7 @@ object types {
       port: NonEmptyString,
       db: NonEmptyString,
       user: NonEmptyString,
-      password: NonEmptyString
+      password: String
   ) {
     def postgresUri: String = s"jdbc:postgresql://${host}:${port}/${db}"
     def commonDriver: String = "org.postgresql.Driver"

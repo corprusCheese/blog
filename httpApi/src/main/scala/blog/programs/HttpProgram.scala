@@ -8,6 +8,7 @@ import blog.resources.{HttpServer, StorageResources}
 import blog.routes.getAll
 import cats._
 import cats.effect._
+import cats.effect.kernel.Spawn
 import dev.profunktor.redis4cats.log4cats.log4CatsInstance
 import eu.timepit.refined.auto._
 import eu.timepit.refined.cats._
@@ -30,7 +31,7 @@ object HttpProgram {
           HttpServer[F].newEmber(r.orNotFound, appConfig.httpServerConfig)
         )
       )
-      .useForever
+      .use[Nothing](_ => Async[F].never)
   }
 
   private def routesResource[F[_]: MonadCancelThrow: Async: Logger](

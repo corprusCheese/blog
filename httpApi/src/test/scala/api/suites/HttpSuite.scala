@@ -58,13 +58,12 @@ trait HttpSuite extends SimpleIOSuite with Checkers {
       routes: HttpRoutes[IO],
       req: Request[IO],
       body: A
-  ): IO[Option[B]] = {
+  ): IO[Option[B]] =
     routes.run(req.withBodyStream(streamWithBody(body))).value.flatMap {
       case Some(resp) =>
         resp.asJson.map(_.as[B]).flatMap(IO.fromEither(_).some.sequence)
       case None => none[B].pure[IO]
     }
-  }
 
   def expectHttpStatusFromQuery[A: Encoder](
       routes: HttpRoutes[IO],

@@ -15,9 +15,10 @@ package object middlewares {
   def commonAuthMiddleware[F[_]: Monad: MonadThrow](
       authCacheDsl: AuthCacheDsl[F],
       jwtAuth: JwtConfigSecretKey
-  ): AuthMiddleware[F, User] =
+  ): AuthMiddleware[F, User] = {
     JwtAuthMiddleware[F, User](
       JwtAuth.hmac(jwtAuth.value, JwtAlgorithm.HS256),
       UsersAuth.make(authCacheDsl).findUser
     )
+  }
 }

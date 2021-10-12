@@ -15,6 +15,7 @@ import org.http4s._
 import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 import org.http4s.circe.JsonDecoder
 import org.http4s.dsl.Http4sDsl
+import org.http4s.server.middleware.CORS
 import org.http4s.server.{AuthMiddleware, Router}
 
 final case class Tags[F[_]: JsonDecoder: MonadThrow](
@@ -94,5 +95,5 @@ final case class Tags[F[_]: JsonDecoder: MonadThrow](
     Router(prefix -> authMiddleware(httpRoutesAuth))
 
   def routes(authMiddleware: AuthMiddleware[F, User]): HttpRoutes[F] =
-    routesWithoutAuthOnly <+> routesWithAuthOnly(authMiddleware)
+    CORS(routesWithoutAuthOnly <+> routesWithAuthOnly(authMiddleware))
 }

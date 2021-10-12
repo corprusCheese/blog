@@ -72,6 +72,6 @@ case class UserStorage[F[_]: Logger: MonadCancelThrow](tx: Transactor[F])
 object UserStorage {
   def resource[F[_]: Logger: MonadCancelThrow](
       tx: Transactor[F]
-  ): Resource[F, UserStorageDsl[F]] =
-    Resource.pure[F, UserStorage[F]](UserStorage[F](tx))
+  ): Resource[F, UserStorage[F]] =
+    Resource.pure(UserStorage[F](tx))
 }

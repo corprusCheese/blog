@@ -18,6 +18,9 @@ lazy val core = (project in file("core"))
       "eu.timepit" %% "refined-cats" % "0.9.15",
       "io.circe" %% "circe-refined" % "0.14.1",
       "dev.profunktor" %% "http4s-jwt-auth" % "1.0.0",
+      "com.github.pureconfig" %% "pureconfig" % "0.17.0",
+      "eu.timepit" %% "refined-pureconfig" % "0.9.27"
+
     )
   )
 
@@ -46,6 +49,7 @@ lazy val storages = (project in file("storages"))
       "org.tpolecat" %% "doobie-postgres" % "1.0.0-RC1",
       "org.tpolecat" %% "doobie-refined" % "1.0.0-RC1",
       "org.tpolecat" %% "doobie-postgres-circe" % "1.0.0-RC1",
+      "org.tpolecat" %% "doobie-scalatest" % "1.0.0-RC1" % Test,
       "com.disneystreaming" %% "weaver-cats" % "0.7.6" % Test,
       "com.disneystreaming" %% "weaver-scalacheck" % "0.7.6" % Test,
       "org.typelevel" %% "log4cats-slf4j" % "2.1.1",
@@ -80,8 +84,7 @@ lazy val http = (project in file("httpApi"))
       "ch.qos.logback" % "logback-classic" % "1.2.6",
       "dev.profunktor" %% "http4s-jwt-auth" % "1.0.0",
       "com.github.pureconfig" %% "pureconfig" % "0.17.0",
-      "org.typelevel" %% "jawn-fs2" % "2.0.0",
-      "eu.timepit" %% "refined-pureconfig" % "0.9.27"
-    )
+      "eu.timepit" %% "refined-pureconfig" % "0.9.27",
+    ),
   )
   .dependsOn(core, storages, coreTests % Test)

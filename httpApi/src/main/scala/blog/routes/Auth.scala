@@ -13,6 +13,7 @@ import org.http4s._
 import org.http4s.circe.CirceEntityCodec._
 import org.http4s.circe._
 import org.http4s.dsl.Http4sDsl
+import org.http4s.server.middleware.CORS
 import org.http4s.server.{AuthMiddleware, Router}
 
 final case class Auth[F[_]: JsonDecoder: MonadThrow](
@@ -22,21 +23,23 @@ final case class Auth[F[_]: JsonDecoder: MonadThrow](
   private val httpRoutes: HttpRoutes[F] = HttpRoutes.of[F] {
     case req @ POST -> Root / "login" =>
       req.decodeR[LoginUser] { user =>
-        authProgram.login(user.username, PassHasher.hash(user.password))
+        authProgram
+          .login(user.username, PassHasher.hash(user.password))
           .flatMap(jwt => Ok(jwt.value))
           .recoverWith {
             case e: CustomError => BadRequest(e.msg)
-            case _ => Forbidden()
+            case _              => Forbidden()
           }
       }
 
     case req @ POST -> Root / "register" =>
       req.decodeR[LoginUser] { user =>
-        authProgram.register(user.username, PassHasher.hash(user.password))
+        authProgram
+          .register(user.username, PassHasher.hash(user.password))
           .flatMap(jwt => Ok(jwt.value))
           .recoverWith {
             case e: CustomError => BadRequest(e.msg)
-            case _ => Forbidden()
+            case _              => Forbidden()
           }
       }
   }
@@ -49,7 +52,9 @@ final case class Auth[F[_]: JsonDecoder: MonadThrow](
   }
 
   def routes(authMiddleware: AuthMiddleware[F, User]): HttpRoutes[F] =
-    Router(
-      "/auth" -> (httpRoutes <+> authMiddleware(httpRoutesAuth))
+    CORS(
+      Router(
+        "/auth" -> (httpRoutes <+> authMiddleware(httpRoutesAuth))
+      )
     )
 }

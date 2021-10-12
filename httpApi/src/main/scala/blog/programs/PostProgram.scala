@@ -132,7 +132,7 @@ object PostProgram {
       private def checkIfTagIdsExisting(tagIds: Vector[TagId]): F[Boolean] =
         tagIds match {
           case v if v == Vector.empty => true.pure[F]
-          case v if v != Vector.empty =>
+          case _ =>
             tagStorage.fetchAll
               .map(_.map(_.tagId).intersect(tagIds) == tagIds)
         }

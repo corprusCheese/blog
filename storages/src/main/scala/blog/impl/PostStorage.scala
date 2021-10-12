@@ -123,6 +123,6 @@ object PostStorage {
   def resource[F[_]: Logger: MonadCancelThrow](
       tx: Transactor[F],
       commonPerPage: PerPage
-  ): Resource[F, PostStorageDsl[F]] =
-    Resource.pure[F, PostStorage[F]](PostStorage[F](tx, commonPerPage))
+  ): Resource[F, PostStorage[F]] =
+    Resource.pure(PostStorage[F](tx, commonPerPage))
 }
